@@ -47,7 +47,7 @@ export default function ReceiptView({ receipt, onPrint }: ReceiptViewProps) {
       <div className="py-3 border-b border-dashed border-gray-300 space-y-1">
         <div className="flex justify-between text-sm">
           <span className="text-gray-500">No. Struk</span>
-          <span className="font-mono font-medium">{receipt.receiptNumber}</span>
+          <span className="font-mono font-medium text-xs">{receipt.receiptNumber}</span>
         </div>
         <div className="flex justify-between text-sm">
           <span className="text-gray-500">Tanggal</span>
@@ -61,33 +61,20 @@ export default function ReceiptView({ receipt, onPrint }: ReceiptViewProps) {
         )}
       </div>
 
-      {/* Items */}
-      <div className="py-3 border-b border-dashed border-gray-300">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-gray-500">
-              <th className="text-left pb-2 font-medium">Item</th>
-              <th className="text-center pb-2 font-medium">Qty</th>
-              <th className="text-right pb-2 font-medium">Harga</th>
-              <th className="text-right pb-2 font-medium">Subtotal</th>
-            </tr>
-          </thead>
-          <tbody>
-            {receipt.items.map((item) => (
-              <tr key={item.id} className="border-t border-gray-100">
-                <td className="py-2 pr-2">
-                  <p className="text-gray-900">
-                    {item.product.name}
-                    {item.variantSize && <span className="text-gray-500"> ({item.variantSize})</span>}
-                  </p>
-                </td>
-                <td className="py-2 text-center text-gray-600">{item.quantity}</td>
-                <td className="py-2 text-right text-gray-600">{formatCurrency(item.price)}</td>
-                <td className="py-2 text-right font-medium">{formatCurrency(item.subtotal)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      {/* Items - vertical layout for better space */}
+      <div className="py-3 border-b border-dashed border-gray-300 space-y-3">
+        {receipt.items.map((item) => (
+          <div key={item.id} className="border-b border-gray-50 last:border-0 pb-2 last:pb-0">
+            <p className="text-sm font-medium text-gray-900">
+              {item.product.name}
+              {item.variantSize && <span className="text-gray-500"> ({item.variantSize})</span>}
+            </p>
+            <div className="flex justify-between text-sm text-gray-600 mt-0.5">
+              <span>{item.quantity} × {formatCurrency(item.price)}</span>
+              <span className="font-medium text-gray-900">{formatCurrency(item.subtotal)}</span>
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* Total */}

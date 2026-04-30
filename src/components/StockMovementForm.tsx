@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, Trash2, Search } from 'lucide-react';
+import { Trash2, Search, ChevronDown, ChevronUp } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 
 interface Variant {
@@ -45,8 +45,7 @@ export default function StockMovementForm({ type, onSubmit, loading }: StockMove
   const [products, setProducts] = useState<Product[]>([]);
   const [entries, setEntries] = useState<StockEntry[]>([]);
   const [search, setSearch] = useState('');
-  const [showProductList, setShowProductList] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [expandedProduct, setExpandedProduct] = useState<string | null>(null);
   const [customerName, setCustomerName] = useState('');
   const [note, setNote] = useState('');
   const [loadingProducts, setLoadingProducts] = useState(true);
@@ -63,21 +62,15 @@ export default function StockMovementForm({ type, onSubmit, loading }: StockMove
 
   const filteredProducts = products.filter(
     (p) =>
-      (p.name.toLowerCase().includes(search.toLowerCase()) ||
-        p.sku.toLowerCase().includes(search.toLowerCase()) ||
-        (p.color && p.color.toLowerCase().includes(search.toLowerCase())))
+      !search ||
+      p.name.toLowerCase().includes(search.toLowerCase()) ||
+      p.sku.toLowerCase().includes(search.toLowerCase()) ||
+      (p.color && p.color.toLowerCase().includes(search.toLowerCase()))
   );
 
-  const selectProduct = (product: Product) => {
-    setSelectedProduct(product);
-    setSearch('');
-    setShowProductList(false);
-  };
-
   const addVariant = (product: Product, variant: Variant) => {
-    // Check if this variant is already in entries
     if (entries.some(e => e.variantId === variant.id)) return;
-    
+
     setEntries([
       ...entries,
       {
@@ -92,7 +85,6 @@ export default function StockMovementForm({ type, onSubmit, loading }: StockMove
         variantStock: variant.stock,
       },
     ]);
-    setSelectedProduct(null);
   };
 
   const updateEntry = (index: number, field: keyof StockEntry, value: string | number) => {
@@ -115,215 +107,197 @@ export default function StockMovementForm({ type, onSubmit, loading }: StockMove
     setNote('');
   };
 
+  const toggleProduct = (productId: string) => {
+    setExpandedProduct(expandedProduct === productId ? null : productId);
+  };
+
   return (
     <div className="space-y-4">
-      {/* Product Search */}
+      {/* Search filter */}
       <div className="relative">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Cari produk (nama/warna)..."
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setShowProductList(true);
-              setSelectedProduct(null);
-            }}
-            onFocus={() => setShowProductList(true)}
-            className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[44px]"
-          />
-        </div>
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+        <input
+          type="text"
+          placeholder="Filter produk..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[44px]"
+        />
+      </div>
 
-        {showProductList && !selectedProduct && (
-          <>
-            <div className="fixed inset-0 z-10" onClick={() => setShowProductList(false)} />
-            <div className="absolute top-full left-0 right-0 z-20 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-60 overflow-y-auto">
-              {loadingProducts ? (
-                <div className="p-4 text-center text-gray-500 text-sm">Memuat produk...</div>
-              ) : filteredProducts.length === 0 ? (
-                <div className="p-4 text-center text-gray-500 text-sm">
-                  {search ? 'Produk tidak ditemukan' : 'Tidak ada produk'}
-                </div>
-              ) : (
-                filteredProducts.map((product) => (
-                  <button
-                    key={product.id}
-                    onClick={() => selectProduct(product)}
-                    className="w-full flex items-center justify-between p-3 hover:bg-gray-50 transition-colors text-left border-b border-gray-50 last:border-0"
-                  >
-                    <div>
-                      <p className="font-medium text-gray-900 text-sm">{product.name}</p>
-                      <p className="text-xs text-gray-500">{product.sku} · Total stok: {product.stock} {product.unit}</p>
+      {/* Product list */}
+      <div className="space-y-2 max-h-[40vh] overflow-y-auto">
+        {loadingProducts ? (
+          <div className="p-4 text-center text-gray-500 text-sm">Memuat produk...</div>
+        ) : filteredProducts.length === 0 ? (
+          <div className="p-4 text-center text-gray-500 text-sm">Produk tidak ditemukan</div>
+        ) : (
+          filteredProducts.map((product) => {
+            const isExpanded = expandedProduct === product.id;
+            const addedVariants = entries.filter(e => e.productId === product.id).length;
+            return (
+              <div key={product.id} className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                <button
+                  onClick={() => toggleProduct(product.id)}
+                  className="w-full flex items-center justify-between p-3 hover:bg-gray-50 transition-colors text-left min-h-[52px]"
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium text-gray-900 text-sm truncate">{product.name}</p>
+                      {addedVariants > 0 && (
+                        <span className="flex-shrink-0 text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-medium">
+                          {addedVariants}
+                        </span>
+                      )}
                     </div>
-                    <Plus className="w-5 h-5 text-blue-500 flex-shrink-0" />
-                  </button>
-                ))
-              )}
-            </div>
-          </>
+                    <p className="text-xs text-gray-500">{product.sku} · Stok: {product.stock}</p>
+                  </div>
+                  {isExpanded ? (
+                    <ChevronUp className="w-5 h-5 text-gray-400 flex-shrink-0" />
+                  ) : (
+                    <ChevronDown className="w-5 h-5 text-gray-400 flex-shrink-0" />
+                  )}
+                </button>
+
+                {isExpanded && (
+                  <div className="px-3 pb-3 border-t border-gray-100">
+                    <p className="text-xs text-gray-500 py-2">Pilih size:</p>
+                    <div className="grid grid-cols-4 gap-2">
+                      {product.variants.map((variant) => {
+                        const alreadyAdded = entries.some(e => e.variantId === variant.id);
+                        const noStock = type === 'OUT' && variant.stock <= 0;
+                        return (
+                          <button
+                            key={variant.id}
+                            onClick={() => addVariant(product, variant)}
+                            disabled={alreadyAdded || noStock}
+                            className={`py-2 rounded-lg text-sm font-medium transition-colors ${
+                              alreadyAdded
+                                ? 'bg-blue-100 text-blue-700 border border-blue-300'
+                                : noStock
+                                ? 'bg-gray-100 text-gray-300 cursor-not-allowed'
+                                : 'bg-gray-50 text-gray-700 border border-gray-200 hover:bg-blue-50 hover:border-blue-300 active:bg-blue-100'
+                            }`}
+                          >
+                            <span className="block text-sm font-semibold">{variant.size}</span>
+                            <span className={`block text-[10px] ${variant.stock > 0 ? 'text-green-600' : 'text-gray-400'}`}>
+                              {variant.stock}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })
         )}
       </div>
 
-      {/* Size Selection Modal */}
-      {selectedProduct && (
-        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-          <p className="font-medium text-gray-900 mb-2">{selectedProduct.name}</p>
-          <p className="text-xs text-gray-500 mb-3">Pilih size:</p>
-          <div className="flex flex-wrap gap-2">
-            {selectedProduct.variants.map((variant) => {
-              const alreadyAdded = entries.some(e => e.variantId === variant.id);
-              return (
-                <button
-                  key={variant.id}
-                  onClick={() => addVariant(selectedProduct, variant)}
-                  disabled={alreadyAdded}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium min-h-[44px] transition-colors ${
-                    alreadyAdded
-                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                      : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
-                  }`}
-                >
-                  {variant.size}
-                  <span className="block text-xs font-normal">
-                    Stok: {variant.stock}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-          <button
-            onClick={() => setSelectedProduct(null)}
-            className="mt-2 text-xs text-gray-500 hover:text-gray-700"
-          >
-            Batal
-          </button>
-        </div>
-      )}
-
-      {/* Entries List */}
+      {/* Selected entries */}
       {entries.length > 0 && (
-        <div className="space-y-3">
-          {entries.map((entry, index) => (
-            <div key={entry.variantId} className="bg-white border border-gray-200 rounded-xl p-4">
-              <div className="flex items-start justify-between mb-3">
-                <div>
-                  <p className="font-medium text-gray-900">{entry.productName}</p>
-                  {type === 'OUT' && (
-                    <p className="text-xs text-gray-500">Stok: {entry.variantStock} {entry.unit}</p>
-                  )}
+        <>
+          <div className="border-t border-gray-200 pt-4">
+            <h3 className="text-sm font-semibold text-gray-700 mb-3">
+              Item dipilih ({entries.length})
+            </h3>
+            <div className="space-y-2">
+              {entries.map((entry, index) => (
+                <div key={entry.variantId} className="bg-blue-50 border border-blue-200 rounded-xl p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="font-medium text-gray-900 text-sm">{entry.productName}</p>
+                    <button
+                      onClick={() => removeEntry(index)}
+                      className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1">
+                      <label className="text-[10px] text-gray-500 block">Qty</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max={type === 'OUT' ? entry.variantStock : undefined}
+                        value={entry.quantity || ''}
+                        onChange={(e) => updateEntry(index, 'quantity', e.target.value === '' ? 0 : parseInt(e.target.value))}
+                        className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <label className="text-[10px] text-gray-500 block">
+                        {type === 'OUT' ? 'Harga' : 'Harga Beli'}
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={entry.price || ''}
+                        onChange={(e) => updateEntry(index, 'price', e.target.value === '' ? 0 : parseInt(e.target.value))}
+                        className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div className="text-right min-w-[80px]">
+                      <label className="text-[10px] text-gray-500 block">Subtotal</label>
+                      <p className="text-sm font-semibold text-gray-900">{formatCurrency(entry.price * entry.quantity)}</p>
+                    </div>
+                  </div>
                 </div>
-                <button
-                  onClick={() => removeEntry(index)}
-                  className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs text-gray-500 mb-1 block">Jumlah</label>
-                  <input
-                    type="number"
-                    min="1"
-                    max={type === 'OUT' ? entry.variantStock : undefined}
-                    value={entry.quantity || ''}
-                    onChange={(e) => updateEntry(index, 'quantity', e.target.value === '' ? 0 : parseInt(e.target.value))}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[44px]"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-gray-500 mb-1 block">
-                    {type === 'OUT' ? 'Harga Jual' : 'Harga Beli'}
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={entry.price || ''}
-                    onChange={(e) => updateEntry(index, 'price', e.target.value === '' ? 0 : parseInt(e.target.value))}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[44px]"
-                  />
-                </div>
-              </div>
-              <div className="mt-2">
-                <label className="text-xs text-gray-500 mb-1 block">Catatan (opsional)</label>
-                <input
-                  type="text"
-                  value={entry.note}
-                  onChange={(e) => updateEntry(index, 'note', e.target.value)}
-                  placeholder="Catatan..."
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[44px]"
-                />
-              </div>
-              <div className="mt-2 text-right">
-                <span className="text-sm font-medium text-gray-900">
-                  Subtotal: {formatCurrency(entry.price * entry.quantity)}
-                </span>
-              </div>
+              ))}
             </div>
-          ))}
-        </div>
-      )}
-
-      {/* Customer name (OUT only) */}
-      {type === 'OUT' && entries.length > 0 && (
-        <div>
-          <label className="text-sm text-gray-600 mb-1 block">Nama Pelanggan (opsional)</label>
-          <input
-            type="text"
-            value={customerName}
-            onChange={(e) => setCustomerName(e.target.value)}
-            placeholder="Nama pelanggan..."
-            className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[44px]"
-          />
-        </div>
-      )}
-
-      {/* Note */}
-      {entries.length > 0 && (
-        <div>
-          <label className="text-sm text-gray-600 mb-1 block">Catatan Umum (opsional)</label>
-          <textarea
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            placeholder="Catatan..."
-            rows={2}
-            className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-          />
-        </div>
-      )}
-
-      {/* Summary & Submit */}
-      {entries.length > 0 && (
-        <div className="bg-white border border-gray-200 rounded-xl p-4">
-          <div className="flex justify-between items-center mb-4">
-            <span className="text-gray-600">Total ({entries.length} item)</span>
-            <span className="text-xl font-bold text-blue-600">{formatCurrency(totalAmount)}</span>
           </div>
-          <button
-            onClick={handleSubmit}
-            disabled={loading || entries.some((e) => e.quantity <= 0)}
-            className="w-full py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] flex items-center justify-center gap-2"
-          >
-            {loading ? (
-              <>
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                Memproses...
-              </>
-            ) : type === 'IN' ? (
-              'Simpan Stok Masuk'
-            ) : (
-              'Buat Struk & Simpan'
-            )}
-          </button>
-        </div>
-      )}
 
-      {/* Empty state */}
-      {entries.length === 0 && !selectedProduct && (
-        <div className="text-center py-8 text-gray-500">
-          <p className="text-sm">Cari dan pilih produk di atas untuk memulai</p>
-        </div>
+          {/* Customer name (OUT only) */}
+          {type === 'OUT' && (
+            <div>
+              <label className="text-sm text-gray-600 mb-1 block">Nama Pelanggan (opsional)</label>
+              <input
+                type="text"
+                value={customerName}
+                onChange={(e) => setCustomerName(e.target.value)}
+                placeholder="Nama pelanggan..."
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[44px]"
+              />
+            </div>
+          )}
+
+          {/* Note */}
+          <div>
+            <label className="text-sm text-gray-600 mb-1 block">Catatan (opsional)</label>
+            <input
+              type="text"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="Catatan..."
+              className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[44px]"
+            />
+          </div>
+
+          {/* Summary & Submit */}
+          <div className="bg-white border border-gray-200 rounded-xl p-4">
+            <div className="flex justify-between items-center mb-4">
+              <span className="text-gray-600">Total ({entries.length} item)</span>
+              <span className="text-xl font-bold text-blue-600">{formatCurrency(totalAmount)}</span>
+            </div>
+            <button
+              onClick={handleSubmit}
+              disabled={loading || entries.some((e) => e.quantity <= 0)}
+              className="w-full py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] flex items-center justify-center gap-2"
+            >
+              {loading ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  Memproses...
+                </>
+              ) : type === 'IN' ? (
+                'Simpan Stok Masuk'
+              ) : (
+                'Buat Struk & Simpan'
+              )}
+            </button>
+          </div>
+        </>
       )}
     </div>
   );
