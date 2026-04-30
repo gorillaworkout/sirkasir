@@ -131,45 +131,37 @@ export default function DashboardPage() {
       )}
 
       <div className="grid md:grid-cols-2 gap-4 md:gap-6">
-        {/* Low Stock Alert */}
+        {/* Low Stock Alert - only show when there are actual warnings */}
+        {data.lowStockProducts.length > 0 && (
         <div className="bg-white rounded-xl border border-gray-200">
           <div className="flex items-center justify-between p-4 border-b border-gray-100">
             <h2 className="font-semibold text-gray-900 flex items-center gap-2">
               <AlertTriangle className="w-5 h-5 text-yellow-500" />
               Peringatan Stok
             </h2>
-            {data.lowStockProducts.length > 0 && (
-              <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full font-medium">
-                {data.lowStockProducts.length + data.outOfStockCount} item
-              </span>
-            )}
+            <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full font-medium">
+              {data.lowStockProducts.length} item
+            </span>
           </div>
           <div className="divide-y divide-gray-50">
-            {data.lowStockProducts.length === 0 && data.outOfStockCount === 0 ? (
-              <div className="p-6 text-center text-gray-500 text-sm">
-                Semua stok aman! 🎉
+            {data.lowStockProducts.slice(0, 5).map((product) => (
+              <div key={product.id} className="flex items-center justify-between px-4 py-3">
+                <div>
+                  <p className="text-sm font-medium text-gray-900">{product.name}</p>
+                  <p className="text-xs text-gray-500">Min: {product.minStock} {product.unit}</p>
+                </div>
+                <span className={`text-sm font-medium px-2 py-1 rounded-full ${
+                  product.stock <= 0
+                    ? 'text-red-600 bg-red-50'
+                    : 'text-yellow-600 bg-yellow-50'
+                }`}>
+                  {product.stock} {product.unit}
+                </span>
               </div>
-            ) : (
-              <>
-                {data.lowStockProducts.slice(0, 5).map((product) => (
-                  <div key={product.id} className="flex items-center justify-between px-4 py-3">
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">{product.name}</p>
-                      <p className="text-xs text-gray-500">Min: {product.minStock} {product.unit}</p>
-                    </div>
-                    <span className={`text-sm font-medium px-2 py-1 rounded-full ${
-                      product.stock <= 0
-                        ? 'text-red-600 bg-red-50'
-                        : 'text-yellow-600 bg-yellow-50'
-                    }`}>
-                      {product.stock} {product.unit}
-                    </span>
-                  </div>
-                ))}
-              </>
-            )}
+            ))}
           </div>
         </div>
+        )}
 
         {/* Recent Activity */}
         <div className="bg-white rounded-xl border border-gray-200">
