@@ -61,6 +61,20 @@ export async function POST(request: NextRequest) {
     }
 
     if (type === 'OUT') {
+      // Validate stock before processing
+      for (const entry of entries) {
+        if (entry.variantId) {
+          const variants = await d1Query('SELECT stock, size FROM ProductVariant WHERE id = ?', [entry.variantId]);
+          const variant = (variants as { stock: number; size: string }[])[0];
+          if (!variant || variant.stock < entry.quantity) {
+            return NextResponse.json(
+              { error: `Stok ${variant?.size || ''} tidak cukup. Tersedia: ${variant?.stock || 0}` },
+              { status: 400 }
+            );
+          }
+        }
+      }
+
       const receiptNumber = generateReceiptNumber();
       const receiptId = generateId();
       const now = new Date().toISOString();
