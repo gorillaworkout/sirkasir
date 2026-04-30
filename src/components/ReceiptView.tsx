@@ -1,7 +1,7 @@
 'use client';
 
 import { formatCurrency, formatDateTime } from '@/lib/utils';
-import { Printer } from 'lucide-react';
+import { Printer, Download } from 'lucide-react';
 import Image from 'next/image';
 
 interface ReceiptViewProps {
@@ -110,15 +110,27 @@ export default function ReceiptView({ receipt, onPrint }: ReceiptViewProps) {
         <p className="text-sm text-gray-500">Terima kasih atas pembelian Anda!</p>
       </div>
 
-      {/* Print button */}
+      {/* Action buttons */}
       {onPrint && (
-        <div className="no-print pt-2">
+        <div className="no-print pt-2 flex gap-2">
           <button
             onClick={onPrint}
-            className="w-full flex items-center justify-center gap-2 py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition-colors min-h-[44px]"
+            className="flex-1 flex items-center justify-center gap-2 py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition-colors min-h-[44px]"
           >
             <Printer className="w-5 h-5" />
-            Cetak Struk
+            Cetak
+          </button>
+          <button
+            onClick={() => {
+              const originalTitle = document.title;
+              document.title = receipt.receiptNumber;
+              window.print();
+              setTimeout(() => { document.title = originalTitle; }, 500);
+            }}
+            className="flex-1 flex items-center justify-center gap-2 py-3 border border-blue-600 text-blue-600 rounded-xl font-medium hover:bg-blue-50 transition-colors min-h-[44px]"
+          >
+            <Download className="w-5 h-5" />
+            Simpan PDF
           </button>
         </div>
       )}

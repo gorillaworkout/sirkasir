@@ -227,8 +227,8 @@ export default function StockMovementForm({ type, onSubmit, loading }: StockMove
                     type="number"
                     min="1"
                     max={type === 'OUT' ? entry.variantStock : undefined}
-                    value={entry.quantity}
-                    onChange={(e) => updateEntry(index, 'quantity', parseInt(e.target.value) || 0)}
+                    value={entry.quantity || ''}
+                    onChange={(e) => updateEntry(index, 'quantity', e.target.value === '' ? 0 : parseInt(e.target.value))}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[44px]"
                   />
                 </div>
@@ -239,8 +239,8 @@ export default function StockMovementForm({ type, onSubmit, loading }: StockMove
                   <input
                     type="number"
                     min="0"
-                    value={entry.price}
-                    onChange={(e) => updateEntry(index, 'price', parseInt(e.target.value) || 0)}
+                    value={entry.price || ''}
+                    onChange={(e) => updateEntry(index, 'price', e.target.value === '' ? 0 : parseInt(e.target.value))}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[44px]"
                   />
                 </div>

@@ -6,7 +6,6 @@ import StockMovementForm from '@/components/StockMovementForm';
 import Modal from '@/components/Modal';
 import ReceiptView from '@/components/ReceiptView';
 import { useToast } from '@/components/Toast';
-import Link from 'next/link';
 
 export default function StockOutPage() {
   const [loading, setLoading] = useState(false);
@@ -107,20 +106,15 @@ export default function StockOutPage() {
 
       <Modal isOpen={showReceipt} onClose={() => setShowReceipt(false)} title="Struk Penjualan" maxWidth="max-w-md">
         {lastReceipt && (
-          <div>
-            <ReceiptView
-              receipt={lastReceipt}
-              onPrint={() => window.print()}
-            />
-            <div className="mt-4 pt-4 border-t border-gray-200">
-              <Link
-                href={`/dashboard/receipts/${lastReceipt.id}`}
-                className="block text-center text-sm text-blue-600 hover:text-blue-800 font-medium"
-              >
-                Lihat Detail Struk →
-              </Link>
-            </div>
-          </div>
+          <ReceiptView
+            receipt={lastReceipt}
+            onPrint={() => {
+              const originalTitle = document.title;
+              document.title = lastReceipt.receiptNumber;
+              window.print();
+              setTimeout(() => { document.title = originalTitle; }, 500);
+            }}
+          />
         )}
       </Modal>
     </div>
