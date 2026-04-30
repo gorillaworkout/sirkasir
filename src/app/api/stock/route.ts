@@ -13,9 +13,11 @@ export async function GET(request: NextRequest) {
     const from = searchParams.get('from');
     const to = searchParams.get('to');
 
-    let sql = `SELECT sm.*, p.name as productName, p.sku as productSku, p.unit as productUnit
+    let sql = `SELECT sm.*, p.name as productName, p.sku as productSku, p.unit as productUnit, p.color as productColor,
+               pv.size as variantSize
                FROM StockMovement sm
-               JOIN Product p ON sm.productId = p.id`;
+               JOIN Product p ON sm.productId = p.id
+               LEFT JOIN ProductVariant pv ON sm.variantId = pv.id`;
     const params: unknown[] = [];
     const conditions: string[] = [];
 
@@ -30,14 +32,16 @@ export async function GET(request: NextRequest) {
     const rows = await d1Query(sql, params);
 
     interface MovementRow {
-      id: string; productId: string; type: string; quantity: number;
+      id: string; productId: string; variantId: string | null; type: string; quantity: number;
       note: string | null; reference: string | null; createdAt: string;
-      productName: string; productSku: string; productUnit: string;
+      productName: string; productSku: string; productUnit: string; productColor: string | null;
+      variantSize: string | null;
     }
     const movements = (rows as MovementRow[]).map(r => ({
-      id: r.id, productId: r.productId, type: r.type, quantity: r.quantity,
+      id: r.id, productId: r.productId, variantId: r.variantId, type: r.type, quantity: r.quantity,
       note: r.note, reference: r.reference, createdAt: r.createdAt,
-      product: { name: r.productName, sku: r.productSku, unit: r.productUnit },
+      product: { name: r.productName, sku: r.productSku, unit: r.productUnit, color: r.productColor },
+      variantSize: r.variantSize,
     }));
 
     return NextResponse.json(movements);
@@ -65,46 +69,52 @@ export async function POST(request: NextRequest) {
         (sum: number, e: { price: number; quantity: number }) => sum + e.price * e.quantity, 0
       );
 
-      // Create receipt
       await d1Query(
         'INSERT INTO Receipt (id, receiptNumber, customerName, totalAmount, note, createdAt) VALUES (?, ?, ?, ?, ?, ?)',
         [receiptId, receiptNumber, customerName || null, totalAmount, note || null, now]
       );
 
-      // Create receipt items, stock movements, and update product stock
       for (const entry of entries) {
         const itemId = generateId();
         const movementId = generateId();
 
         await d1Query(
-          'INSERT INTO ReceiptItem (id, receiptId, productId, quantity, price, subtotal) VALUES (?, ?, ?, ?, ?, ?)',
-          [itemId, receiptId, entry.productId, entry.quantity, entry.price, entry.price * entry.quantity]
+          'INSERT INTO ReceiptItem (id, receiptId, productId, variantId, quantity, price, subtotal) VALUES (?, ?, ?, ?, ?, ?, ?)',
+          [itemId, receiptId, entry.productId, entry.variantId || null, entry.quantity, entry.price, entry.price * entry.quantity]
         );
 
         await d1Query(
-          'INSERT INTO StockMovement (id, productId, type, quantity, note, reference, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?)',
-          [movementId, entry.productId, 'OUT', entry.quantity, entry.note || null, receiptNumber, now]
+          'INSERT INTO StockMovement (id, productId, variantId, type, quantity, note, reference, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+          [movementId, entry.productId, entry.variantId || null, 'OUT', entry.quantity, entry.note || null, receiptNumber, now]
         );
 
+        // Update variant stock
+        if (entry.variantId) {
+          await d1Query('UPDATE ProductVariant SET stock = stock - ?, updatedAt = ? WHERE id = ?',
+            [entry.quantity, now, entry.variantId]);
+        }
+        // Update product total stock
         await d1Query('UPDATE Product SET stock = stock - ?, updatedAt = ? WHERE id = ?',
-          [entry.quantity, now, entry.productId]
-        );
+          [entry.quantity, now, entry.productId]);
       }
 
-      // Fetch receipt with items for response
       const items = await d1Query(
-        `SELECT ri.*, p.name as productName, p.unit as productUnit
-         FROM ReceiptItem ri JOIN Product p ON ri.productId = p.id
+        `SELECT ri.*, p.name as productName, p.unit as productUnit, pv.size as variantSize
+         FROM ReceiptItem ri 
+         JOIN Product p ON ri.productId = p.id
+         LEFT JOIN ProductVariant pv ON ri.variantId = pv.id
          WHERE ri.receiptId = ?`, [receiptId]
       );
 
       interface ItemRow {
-        id: string; receiptId: string; productId: string; quantity: number;
-        price: number; subtotal: number; productName: string; productUnit: string;
+        id: string; receiptId: string; productId: string; variantId: string | null;
+        quantity: number; price: number; subtotal: number;
+        productName: string; productUnit: string; variantSize: string | null;
       }
       const formattedItems = (items as ItemRow[]).map(i => ({
         id: i.id, quantity: i.quantity, price: i.price, subtotal: i.subtotal,
         product: { name: i.productName, unit: i.productUnit },
+        variantSize: i.variantSize,
       }));
 
       return NextResponse.json({
@@ -123,13 +133,16 @@ export async function POST(request: NextRequest) {
         const movementId = generateId();
 
         await d1Query(
-          'INSERT INTO StockMovement (id, productId, type, quantity, note, createdAt) VALUES (?, ?, ?, ?, ?, ?)',
-          [movementId, entry.productId, 'IN', entry.quantity, entry.note || null, now]
+          'INSERT INTO StockMovement (id, productId, variantId, type, quantity, note, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?)',
+          [movementId, entry.productId, entry.variantId || null, 'IN', entry.quantity, entry.note || null, now]
         );
 
+        if (entry.variantId) {
+          await d1Query('UPDATE ProductVariant SET stock = stock + ?, updatedAt = ? WHERE id = ?',
+            [entry.quantity, now, entry.variantId]);
+        }
         await d1Query('UPDATE Product SET stock = stock + ?, updatedAt = ? WHERE id = ?',
-          [entry.quantity, now, entry.productId]
-        );
+          [entry.quantity, now, entry.productId]);
       }
 
       return NextResponse.json({ success: true, count: entries.length }, { status: 201 });

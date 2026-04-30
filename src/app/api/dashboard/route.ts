@@ -14,53 +14,58 @@ export async function GET() {
 
     const [
       countRows,
-      outOfStockRows,
       todayMovementRows,
       allProductRows,
       todayReceiptRows,
       lowStockRows,
     ] = await Promise.all([
       d1Query('SELECT COUNT(*) as count FROM Product'),
-      d1Query('SELECT COUNT(*) as count FROM Product WHERE stock <= 0'),
       d1Query('SELECT COUNT(*) as count FROM StockMovement WHERE createdAt >= ? AND createdAt < ?', [todayStr, tomorrowStr]),
       d1Query('SELECT stock, costPrice FROM Product'),
       d1Query('SELECT totalAmount FROM Receipt WHERE createdAt >= ? AND createdAt < ?', [todayStr, tomorrowStr]),
-      d1Query('SELECT id, name, stock, minStock, unit FROM Product WHERE stock > 0 AND stock <= minStock'),
+      d1Query('SELECT p.id, p.name, p.color, p.unit, p.minStock, COALESCE(SUM(pv.stock), 0) as totalStock FROM Product p LEFT JOIN ProductVariant pv ON pv.productId = p.id GROUP BY p.id HAVING totalStock > 0 AND totalStock <= p.minStock'),
     ]);
 
-    // Recent movements with product info via JOIN
+    // Recent movements with product + variant info
     const recentMovements = await d1Query(
       `SELECT sm.id, sm.type, sm.quantity, sm.note, sm.reference, sm.createdAt, 
-              p.name as productName, p.unit as productUnit
+              p.name as productName, p.unit as productUnit, p.color as productColor,
+              pv.size as variantSize
        FROM StockMovement sm 
-       JOIN Product p ON sm.productId = p.id 
+       JOIN Product p ON sm.productId = p.id
+       LEFT JOIN ProductVariant pv ON sm.variantId = pv.id
        ORDER BY sm.createdAt DESC LIMIT 10`
     );
 
-    const totalProducts = countRows[0]?.count || 0;
-    const outOfStockCount = outOfStockRows[0]?.count || 0;
-    const todayTransactions = todayMovementRows[0]?.count || 0;
+    // Out of stock: products where ALL variants have 0 stock
+    const outOfStockRows = await d1Query(
+      'SELECT COUNT(*) as count FROM Product p WHERE (SELECT COALESCE(SUM(pv.stock), 0) FROM ProductVariant pv WHERE pv.productId = p.id) <= 0'
+    );
+
+    const totalProducts = (countRows as { count: number }[])[0]?.count || 0;
+    const outOfStockCount = (outOfStockRows as { count: number }[])[0]?.count || 0;
+    const todayTransactions = (todayMovementRows as { count: number }[])[0]?.count || 0;
 
     const totalStockValue = (allProductRows as { stock: number; costPrice: number }[]).reduce(
-      (sum: number, p: { stock: number; costPrice: number }) => sum + p.stock * p.costPrice, 0
+      (sum, p) => sum + p.stock * p.costPrice, 0
     );
 
     const todayRevenue = (todayReceiptRows as { totalAmount: number }[]).reduce(
-      (sum: number, r: { totalAmount: number }) => sum + r.totalAmount, 0
+      (sum, r) => sum + r.totalAmount, 0
     );
 
-    // Format recentMovements to match frontend expected shape
-    const formattedMovements = (recentMovements as { id: string; type: string; quantity: number; note: string | null; reference: string | null; createdAt: string; productName: string; productUnit: string }[]).map(
-      (m) => ({
-        id: m.id,
-        type: m.type,
-        quantity: m.quantity,
-        note: m.note,
-        reference: m.reference,
-        createdAt: m.createdAt,
-        product: { name: m.productName, unit: m.productUnit },
-      })
-    );
+    interface MovementRow {
+      id: string; type: string; quantity: number; note: string | null;
+      reference: string | null; createdAt: string;
+      productName: string; productUnit: string; productColor: string | null;
+      variantSize: string | null;
+    }
+    const formattedMovements = (recentMovements as MovementRow[]).map(m => ({
+      id: m.id, type: m.type, quantity: m.quantity,
+      note: m.note, reference: m.reference, createdAt: m.createdAt,
+      product: { name: m.productName, unit: m.productUnit, color: m.productColor },
+      variantSize: m.variantSize,
+    }));
 
     return NextResponse.json({
       totalProducts,

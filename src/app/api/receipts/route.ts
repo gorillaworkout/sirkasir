@@ -21,7 +21,6 @@ export async function GET(request: NextRequest) {
 
     const receipts = await d1Query(sql, params);
 
-    // Fetch items for each receipt
     interface Receipt {
       id: string; receiptNumber: string; customerName: string | null;
       totalAmount: number; note: string | null; createdAt: string;
@@ -29,14 +28,17 @@ export async function GET(request: NextRequest) {
     const result = [];
     for (const r of receipts as Receipt[]) {
       const items = await d1Query(
-        `SELECT ri.*, p.name as productName, p.unit as productUnit
-         FROM ReceiptItem ri JOIN Product p ON ri.productId = p.id
+        `SELECT ri.*, p.name as productName, p.unit as productUnit, pv.size as variantSize
+         FROM ReceiptItem ri 
+         JOIN Product p ON ri.productId = p.id
+         LEFT JOIN ProductVariant pv ON ri.variantId = pv.id
          WHERE ri.receiptId = ?`, [r.id]
       );
 
       interface ItemRow {
-        id: string; receiptId: string; productId: string; quantity: number;
-        price: number; subtotal: number; productName: string; productUnit: string;
+        id: string; receiptId: string; productId: string; variantId: string | null;
+        quantity: number; price: number; subtotal: number;
+        productName: string; productUnit: string; variantSize: string | null;
       }
       result.push({
         ...r,
@@ -44,6 +46,7 @@ export async function GET(request: NextRequest) {
           id: i.id, receiptId: i.receiptId, productId: i.productId,
           quantity: i.quantity, price: i.price, subtotal: i.subtotal,
           product: { name: i.productName, unit: i.productUnit },
+          variantSize: i.variantSize,
         })),
       });
     }

@@ -18,14 +18,17 @@ export async function GET(
     }
 
     const items = await d1Query(
-      `SELECT ri.*, p.name as productName, p.unit as productUnit, p.sku as productSku
-       FROM ReceiptItem ri JOIN Product p ON ri.productId = p.id
+      `SELECT ri.*, p.name as productName, p.unit as productUnit, p.sku as productSku, pv.size as variantSize
+       FROM ReceiptItem ri 
+       JOIN Product p ON ri.productId = p.id
+       LEFT JOIN ProductVariant pv ON ri.variantId = pv.id
        WHERE ri.receiptId = ?`, [id]
     );
 
     interface ItemRow {
-      id: string; receiptId: string; productId: string; quantity: number;
-      price: number; subtotal: number; productName: string; productUnit: string; productSku: string;
+      id: string; receiptId: string; productId: string; variantId: string | null;
+      quantity: number; price: number; subtotal: number;
+      productName: string; productUnit: string; productSku: string; variantSize: string | null;
     }
 
     return NextResponse.json({
@@ -34,6 +37,7 @@ export async function GET(
         id: i.id, receiptId: i.receiptId, productId: i.productId,
         quantity: i.quantity, price: i.price, subtotal: i.subtotal,
         product: { name: i.productName, unit: i.productUnit, sku: i.productSku },
+        variantSize: i.variantSize,
       })),
     });
   } catch (error) {

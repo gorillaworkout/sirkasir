@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Plus, Edit2, Trash2, Package } from 'lucide-react';
-import ProductCard from '@/components/ProductCard';
 import SearchBar from '@/components/SearchBar';
 import Modal from '@/components/Modal';
 import ConfirmDialog from '@/components/ConfirmDialog';
@@ -14,6 +13,12 @@ import { formatCurrency, getStockStatus, getStockStatusColor, getStockStatusLabe
 interface Category {
   id: string;
   name: string;
+}
+
+interface Variant {
+  id: string;
+  size: string;
+  stock: number;
 }
 
 interface Product {
@@ -28,6 +33,8 @@ interface Product {
   unit: string;
   minStock: number;
   image: string | null;
+  color: string | null;
+  variants: Variant[];
 }
 
 const defaultForm = {
@@ -36,10 +43,11 @@ const defaultForm = {
   categoryId: '',
   price: 0,
   costPrice: 0,
-  stock: 0,
   unit: 'pcs',
   minStock: 5,
   image: '',
+  color: '',
+  sizes: ['S', 'M', 'L', 'XL'],
 };
 
 export default function ProductsPage() {
@@ -55,6 +63,7 @@ export default function ProductsPage() {
   const [form, setForm] = useState(defaultForm);
   const [saving, setSaving] = useState(false);
   const [editMode, setEditMode] = useState(false);
+  const [newSize, setNewSize] = useState('');
   const { showToast } = useToast();
 
   const fetchProducts = useCallback(async () => {
@@ -100,10 +109,11 @@ export default function ProductsPage() {
       categoryId: product.categoryId,
       price: product.price,
       costPrice: product.costPrice,
-      stock: product.stock,
       unit: product.unit,
       minStock: product.minStock,
       image: product.image || '',
+      color: product.color || '',
+      sizes: product.variants.map(v => v.size),
     });
     setSelectedProduct(product);
     setEditMode(true);
@@ -128,9 +138,16 @@ export default function ProductsPage() {
           ...form,
           price: Number(form.price),
           costPrice: Number(form.costPrice),
-          stock: Number(form.stock),
           minStock: Number(form.minStock),
           image: form.image || null,
+          color: form.color || null,
+          sizes: form.sizes,
+          ...(editMode && {
+            variants: form.sizes.map(size => {
+              const existing = selectedProduct?.variants.find(v => v.size === size);
+              return existing ? { id: existing.id, size } : { size };
+            }),
+          }),
         }),
       });
 
@@ -172,6 +189,26 @@ export default function ProductsPage() {
     setShowDetail(true);
   };
 
+  const addSize = () => {
+    const size = newSize.trim().toUpperCase();
+    if (size && !form.sizes.includes(size)) {
+      setForm({ ...form, sizes: [...form.sizes, size] });
+      setNewSize('');
+    }
+  };
+
+  const removeSize = (size: string) => {
+    // Don't allow removing sizes that have stock (in edit mode)
+    if (editMode) {
+      const variant = selectedProduct?.variants.find(v => v.size === size);
+      if (variant && variant.stock > 0) {
+        showToast(`Tidak bisa hapus size ${size}, masih ada stok ${variant.stock}`, 'warning');
+        return;
+      }
+    }
+    setForm({ ...form, sizes: form.sizes.filter(s => s !== size) });
+  };
+
   if (loading) return <LoadingSpinner />;
 
   return (
@@ -195,7 +232,7 @@ export default function ProductsPage() {
       <div className="flex flex-col sm:flex-row gap-3 mb-4">
         <div className="flex-1">
           <SearchBar
-            placeholder="Cari nama atau SKU..."
+            placeholder="Cari nama, SKU, atau warna..."
             value={search}
             onChange={setSearch}
           />
@@ -212,7 +249,7 @@ export default function ProductsPage() {
         </select>
       </div>
 
-      {/* Products Grid (mobile) / Table (desktop) */}
+      {/* Products */}
       {products.length === 0 ? (
         <EmptyState
           icon={<Package className="w-8 h-8 text-gray-400" />}
@@ -227,93 +264,56 @@ export default function ProductsPage() {
           }
         />
       ) : (
-        <>
-          {/* Mobile Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:hidden">
-            {products.map((product) => (
-              <ProductCard
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {products.map((product) => {
+            const status = getStockStatus(product.stock, product.minStock);
+            return (
+              <div
                 key={product.id}
-                product={product}
                 onClick={() => openDetail(product)}
-              />
-            ))}
-          </div>
-
-          {/* Desktop Table */}
-          <div className="hidden md:block bg-white rounded-xl border border-gray-200 overflow-hidden">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-200 bg-gray-50">
-                  <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Produk</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">SKU</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Kategori</th>
-                  <th className="text-right px-4 py-3 text-xs font-medium text-gray-500 uppercase">Harga Jual</th>
-                  <th className="text-right px-4 py-3 text-xs font-medium text-gray-500 uppercase">Stok</th>
-                  <th className="text-center px-4 py-3 text-xs font-medium text-gray-500 uppercase">Status</th>
-                  <th className="text-right px-4 py-3 text-xs font-medium text-gray-500 uppercase">Aksi</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {products.map((product) => {
-                  const status = getStockStatus(product.stock, product.minStock);
-                  return (
-                    <tr key={product.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                            <Package className="w-5 h-5 text-gray-400" />
-                          </div>
-                          <span className="font-medium text-gray-900">{product.name}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-500 font-mono">{product.sku}</td>
-                      <td className="px-4 py-3 text-sm text-gray-500">{product.category.name}</td>
-                      <td className="px-4 py-3 text-sm text-gray-900 text-right font-medium">{formatCurrency(product.price)}</td>
-                      <td className="px-4 py-3 text-sm text-gray-900 text-right">{product.stock} {product.unit}</td>
-                      <td className="px-4 py-3 text-center">
-                        <span className={`text-xs font-medium px-2 py-1 rounded-full ${getStockStatusColor(status)}`}>
-                          {getStockStatusLabel(status)}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <button
-                            onClick={() => openEdit(product)}
-                            className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                            title="Edit"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => setDeleteTarget(product)}
-                            className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                            title="Hapus"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </>
+                className="bg-white border border-gray-200 rounded-xl p-4 cursor-pointer hover:shadow-md transition-shadow"
+              >
+                <div className="flex items-start justify-between mb-2">
+                  <div>
+                    <h3 className="font-semibold text-gray-900">{product.name}</h3>
+                    <p className="text-xs text-gray-500">{product.sku}</p>
+                  </div>
+                  <span className={`text-xs font-medium px-2 py-1 rounded-full ${getStockStatusColor(status)}`}>
+                    {getStockStatusLabel(status)}
+                  </span>
+                </div>
+                {product.price > 0 && (
+                  <p className="text-sm font-medium text-blue-600 mb-2">{formatCurrency(product.price)}</p>
+                )}
+                {/* Size grid */}
+                <div className="flex flex-wrap gap-1.5">
+                  {product.variants.map((v) => (
+                    <div
+                      key={v.id}
+                      className={`text-xs px-2 py-1 rounded-md font-medium ${
+                        v.stock > 0
+                          ? 'bg-green-50 text-green-700 border border-green-200'
+                          : 'bg-gray-100 text-gray-400'
+                      }`}
+                    >
+                      {v.size}: {v.stock}
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-500 mt-2">Total: {product.stock} {product.unit}</p>
+              </div>
+            );
+          })}
+        </div>
       )}
 
-      {/* Product Detail Modal (mobile) */}
+      {/* Product Detail Modal */}
       <Modal isOpen={showDetail} onClose={() => setShowDetail(false)} title="Detail Produk">
         {selectedProduct && (
           <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="w-16 h-16 bg-gray-100 rounded-xl flex items-center justify-center">
-                <Package className="w-8 h-8 text-gray-400" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-lg text-gray-900">{selectedProduct.name}</h3>
-                <p className="text-sm text-gray-500">{selectedProduct.sku}</p>
-              </div>
+            <div>
+              <h3 className="font-semibold text-lg text-gray-900">{selectedProduct.name}</h3>
+              <p className="text-sm text-gray-500">{selectedProduct.sku}</p>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
@@ -321,10 +321,12 @@ export default function ProductsPage() {
                 <p className="text-xs text-gray-500">Kategori</p>
                 <p className="font-medium text-gray-900">{selectedProduct.category.name}</p>
               </div>
-              <div className="bg-gray-50 rounded-xl p-3">
-                <p className="text-xs text-gray-500">Satuan</p>
-                <p className="font-medium text-gray-900">{selectedProduct.unit}</p>
-              </div>
+              {selectedProduct.color && (
+                <div className="bg-gray-50 rounded-xl p-3">
+                  <p className="text-xs text-gray-500">Warna</p>
+                  <p className="font-medium text-gray-900">{selectedProduct.color}</p>
+                </div>
+              )}
               <div className="bg-gray-50 rounded-xl p-3">
                 <p className="text-xs text-gray-500">Harga Jual</p>
                 <p className="font-medium text-gray-900">{formatCurrency(selectedProduct.price)}</p>
@@ -333,13 +335,36 @@ export default function ProductsPage() {
                 <p className="text-xs text-gray-500">Harga Beli</p>
                 <p className="font-medium text-gray-900">{formatCurrency(selectedProduct.costPrice)}</p>
               </div>
-              <div className="bg-gray-50 rounded-xl p-3">
-                <p className="text-xs text-gray-500">Stok</p>
-                <p className="font-medium text-gray-900">{selectedProduct.stock} {selectedProduct.unit}</p>
-              </div>
-              <div className="bg-gray-50 rounded-xl p-3">
-                <p className="text-xs text-gray-500">Min Stok</p>
-                <p className="font-medium text-gray-900">{selectedProduct.minStock} {selectedProduct.unit}</p>
+            </div>
+
+            {/* Variants table */}
+            <div>
+              <p className="text-sm font-medium text-gray-700 mb-2">Stok per Size</p>
+              <div className="bg-gray-50 rounded-xl overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-200">
+                      <th className="text-left px-4 py-2 font-medium text-gray-500">Size</th>
+                      <th className="text-right px-4 py-2 font-medium text-gray-500">Stok</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedProduct.variants.map((v) => (
+                      <tr key={v.id} className="border-b border-gray-100 last:border-0">
+                        <td className="px-4 py-2 font-medium">{v.size}</td>
+                        <td className={`px-4 py-2 text-right font-medium ${
+                          v.stock > 0 ? 'text-green-600' : 'text-red-500'
+                        }`}>
+                          {v.stock}
+                        </td>
+                      </tr>
+                    ))}
+                    <tr className="bg-gray-100 font-bold">
+                      <td className="px-4 py-2">Total</td>
+                      <td className="px-4 py-2 text-right">{selectedProduct.stock}</td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
             </div>
 
@@ -378,7 +403,7 @@ export default function ProductsPage() {
               type="text"
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
-              placeholder="Nama produk"
+              placeholder="Kaos Polos Putih"
               className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[44px]"
             />
           </div>
@@ -390,23 +415,34 @@ export default function ProductsPage() {
                 type="text"
                 value={form.sku}
                 onChange={(e) => setForm({ ...form, sku: e.target.value.toUpperCase() })}
-                placeholder="SKU-001"
+                placeholder="KP-PTH"
                 className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[44px] font-mono"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Kategori *</label>
-              <select
-                value={form.categoryId}
-                onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
+              <label className="block text-sm font-medium text-gray-700 mb-1">Warna</label>
+              <input
+                type="text"
+                value={form.color}
+                onChange={(e) => setForm({ ...form, color: e.target.value })}
+                placeholder="Putih"
                 className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[44px]"
-              >
-                <option value="">Pilih</option>
-                {categories.map((cat) => (
-                  <option key={cat.id} value={cat.id}>{cat.name}</option>
-                ))}
-              </select>
+              />
             </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Kategori *</label>
+            <select
+              value={form.categoryId}
+              onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
+              className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[44px]"
+            >
+              <option value="">Pilih</option>
+              {categories.map((cat) => (
+                <option key={cat.id} value={cat.id}>{cat.name}</option>
+              ))}
+            </select>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -432,38 +468,40 @@ export default function ProductsPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
-            {!editMode && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Stok Awal</label>
-                <input
-                  type="number"
-                  value={form.stock}
-                  onChange={(e) => setForm({ ...form, stock: Number(e.target.value) })}
-                  min="0"
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[44px]"
-                />
-              </div>
-            )}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Satuan</label>
+          {/* Sizes */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Ukuran (Size)</label>
+            <div className="flex flex-wrap gap-2 mb-2">
+              {form.sizes.map((size) => (
+                <span
+                  key={size}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium"
+                >
+                  {size}
+                  <button
+                    onClick={() => removeSize(size)}
+                    className="ml-1 text-blue-400 hover:text-red-500 text-lg leading-none"
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+            <div className="flex gap-2">
               <input
                 type="text"
-                value={form.unit}
-                onChange={(e) => setForm({ ...form, unit: e.target.value })}
-                placeholder="pcs"
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[44px]"
+                value={newSize}
+                onChange={(e) => setNewSize(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addSize())}
+                placeholder="Tambah size (misal: XXL)"
+                className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[44px]"
               />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Min Stok</label>
-              <input
-                type="number"
-                value={form.minStock}
-                onChange={(e) => setForm({ ...form, minStock: Number(e.target.value) })}
-                min="0"
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[44px]"
-              />
+              <button
+                onClick={addSize}
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 min-h-[44px]"
+              >
+                Tambah
+              </button>
             </div>
           </div>
 

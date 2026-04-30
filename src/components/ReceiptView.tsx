@@ -21,6 +21,7 @@ interface ReceiptViewProps {
         name: string;
         unit: string;
       };
+      variantSize?: string | null;
     }[];
   };
   onPrint?: () => void;
@@ -75,7 +76,10 @@ export default function ReceiptView({ receipt, onPrint }: ReceiptViewProps) {
             {receipt.items.map((item) => (
               <tr key={item.id} className="border-t border-gray-100">
                 <td className="py-2 pr-2">
-                  <p className="text-gray-900">{item.product.name}</p>
+                  <p className="text-gray-900">
+                    {item.product.name}
+                    {item.variantSize && <span className="text-gray-500"> ({item.variantSize})</span>}
+                  </p>
                 </td>
                 <td className="py-2 text-center text-gray-600">{item.quantity}</td>
                 <td className="py-2 text-right text-gray-600">{formatCurrency(item.price)}</td>
