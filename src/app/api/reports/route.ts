@@ -10,9 +10,11 @@ export async function GET(request: NextRequest) {
     const to = searchParams.get('to');
 
     // Get stock movements with product info
-    let movementSql = `SELECT sm.*, p.name as productName, p.sku as productSku, p.unit as productUnit, p.stock as productStock
+    let movementSql = `SELECT sm.*, p.name as productName, p.sku as productSku, p.unit as productUnit, p.stock as productStock,
+                        pv.size as variantSize
                         FROM StockMovement sm
-                        JOIN Product p ON sm.productId = p.id`;
+                        JOIN Product p ON sm.productId = p.id
+                        LEFT JOIN ProductVariant pv ON sm.variantId = pv.id`;
     const params: unknown[] = [];
     const conditions: string[] = [];
 
@@ -28,12 +30,14 @@ export async function GET(request: NextRequest) {
       id: string; productId: string; type: string; quantity: number;
       note: string | null; reference: string | null; createdAt: string;
       productName: string; productSku: string; productUnit: string; productStock: number;
+      variantSize: string | null;
     }
 
     const movements = (movementRows as MovementRow[]).map(r => ({
       id: r.id, productId: r.productId, type: r.type, quantity: r.quantity,
       note: r.note, reference: r.reference, createdAt: r.createdAt,
       product: { name: r.productName, sku: r.productSku, unit: r.productUnit, stock: r.productStock },
+      variantSize: r.variantSize,
     }));
 
     // Get all products for summary

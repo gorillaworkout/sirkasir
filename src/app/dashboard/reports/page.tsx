@@ -14,6 +14,7 @@ interface Movement {
   reference: string | null;
   createdAt: string;
   product: { name: string; sku: string; unit: string };
+  variantSize?: string | null;
 }
 
 interface ProductSummary {
@@ -258,7 +259,10 @@ export default function ReportsPage() {
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900">{movement.product.name}</p>
+                      <p className="text-sm font-medium text-gray-900">
+                        {movement.product.name}
+                        {movement.variantSize && <span className="text-gray-500"> ({movement.variantSize})</span>}
+                      </p>
                       <p className="text-xs text-gray-500">
                         {movement.quantity} {movement.product.unit}
                         {movement.reference && ` · ${movement.reference}`}
