@@ -1,7 +1,8 @@
 'use client';
 
 import { formatCurrency, formatDateTime } from '@/lib/utils';
-import { Store, Printer } from 'lucide-react';
+import { Printer } from 'lucide-react';
+import Image from 'next/image';
 
 interface ReceiptViewProps {
   receipt: {
@@ -30,10 +31,14 @@ export default function ReceiptView({ receipt, onPrint }: ReceiptViewProps) {
     <div className="bg-white max-w-md mx-auto">
       {/* Header */}
       <div className="text-center pb-4 border-b-2 border-dashed border-gray-300">
-        <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center mx-auto mb-2">
-          <Store className="w-6 h-6 text-white" />
-        </div>
-        <h2 className="text-xl font-bold text-gray-900">Sirkasir</h2>
+        <Image
+          src="/logo-kikihoka.png"
+          alt="Kikihoka Kaospolos"
+          width={72}
+          height={72}
+          className="mx-auto mb-2"
+        />
+        <h2 className="text-xl font-bold text-gray-900">Kikihoka Kaospolos</h2>
         <p className="text-sm text-gray-500">Struk Penjualan</p>
       </div>
 
