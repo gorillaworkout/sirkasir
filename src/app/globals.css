@@ -29,6 +29,10 @@ body {
 }
 
 @media print {
+  @page {
+    size: 80mm auto;
+    margin: 2mm;
+  }
   .no-print,
   nav,
   aside {
@@ -36,9 +40,41 @@ body {
   }
   body {
     background: white !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 80mm !important;
   }
   main {
     padding: 0 !important;
+    margin: 0 !important;
+  }
+  /* Receipt container */
+  .receipt-print-area {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    background: white !important;
+  }
+  .receipt-print-area * {
+    font-size: 11px !important;
+    line-height: 1.4 !important;
+  }
+  .receipt-print-area h2 {
+    font-size: 14px !important;
+  }
+  .receipt-print-area img {
+    width: 48px !important;
+    height: 48px !important;
+  }
+  /* Hide background wrapper */
+  .receipt-page-wrapper {
+    background: white !important;
+    padding: 0 !important;
+    min-height: auto !important;
   }
 }
 

@@ -57,7 +57,7 @@ export default function ReceiptDetailPage({ params }: { params: Promise<{ id: st
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 md:bg-gray-50">
+    <div className="min-h-screen bg-gray-100 md:bg-gray-50 receipt-page-wrapper">
       {/* Back + Print bar */}
       <div className="sticky top-0 z-10 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between no-print">
         <Link
@@ -77,9 +77,9 @@ export default function ReceiptDetailPage({ params }: { params: Promise<{ id: st
       </div>
 
       {/* Receipt - centered, clean */}
-      <div className="max-w-sm mx-auto py-6 px-4">
+      <div className="max-w-sm mx-auto py-6 px-4 receipt-print-area">
         {receipt && (
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 receipt-print-area">
             <ReceiptView receipt={receipt} />
           </div>
         )}
