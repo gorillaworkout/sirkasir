@@ -57,9 +57,9 @@ export default function ReceiptDetailPage({ params }: { params: Promise<{ id: st
   }
 
   return (
-    <div className="p-4 md:p-6 max-w-md mx-auto">
-      {/* Back button */}
-      <div className="mb-4 no-print">
+    <div className="min-h-screen bg-gray-100 md:bg-gray-50">
+      {/* Back + Print bar */}
+      <div className="sticky top-0 z-10 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between no-print">
         <Link
           href="/dashboard/receipts"
           className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors min-h-[44px]"
@@ -67,14 +67,23 @@ export default function ReceiptDetailPage({ params }: { params: Promise<{ id: st
           <ArrowLeft className="w-5 h-5" />
           Kembali
         </Link>
+        <button
+          onClick={() => window.print()}
+          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors min-h-[44px]"
+        >
+          <Printer className="w-4 h-4" />
+          Cetak
+        </button>
       </div>
 
-      {receipt && (
-        <ReceiptView
-          receipt={receipt}
-          onPrint={() => window.print()}
-        />
-      )}
+      {/* Receipt - centered, clean */}
+      <div className="max-w-sm mx-auto py-6 px-4">
+        {receipt && (
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+            <ReceiptView receipt={receipt} />
+          </div>
+        )}
+      </div>
     </div>
   );
 }

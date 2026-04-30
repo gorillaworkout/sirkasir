@@ -29,8 +29,16 @@ body {
 }
 
 @media print {
-  .no-print {
+  .no-print,
+  nav,
+  aside {
     display: none !important;
+  }
+  body {
+    background: white !important;
+  }
+  main {
+    padding: 0 !important;
   }
 }
 
