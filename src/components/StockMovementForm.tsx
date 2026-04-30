@@ -126,7 +126,7 @@ export default function StockMovementForm({ type, onSubmit, loading }: StockMove
       </div>
 
       {/* Product list */}
-      <div className="space-y-2 max-h-[40vh] overflow-y-auto">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
         {loadingProducts ? (
           <div className="p-4 text-center text-gray-500 text-sm">Memuat produk...</div>
         ) : filteredProducts.length === 0 ? (
@@ -202,7 +202,7 @@ export default function StockMovementForm({ type, onSubmit, loading }: StockMove
             <h3 className="text-sm font-semibold text-gray-700 mb-3">
               Item dipilih ({entries.length})
             </h3>
-            <div className="space-y-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               {entries.map((entry, index) => (
                 <div key={entry.variantId} className="bg-blue-50 border border-blue-200 rounded-xl p-3">
                   <div className="flex items-center justify-between mb-2">
