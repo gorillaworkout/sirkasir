@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
     if (productIds.length > 0) {
       const placeholders = productIds.map(() => '?').join(',');
       variants = await d1Query(
-        `SELECT id, productId, size, stock, price, costPrice FROM ProductVariant WHERE productId IN (${placeholders}) ORDER BY CASE size WHEN 'S' THEN 1 WHEN 'M' THEN 2 WHEN 'L' THEN 3 WHEN 'XL' THEN 4 WHEN 'XXL' THEN 5 ELSE 6 END`,
+        `SELECT id, productId, size, stock, price, costPrice FROM ProductVariant WHERE productId IN (${placeholders}) ORDER BY CASE size WHEN '1' THEN 1 WHEN '2' THEN 2 WHEN '3' THEN 3 WHEN 'S' THEN 4 WHEN 'M' THEN 5 WHEN 'L' THEN 6 WHEN 'XL' THEN 7 WHEN 'XXL' THEN 8 WHEN '3XL' THEN 9 WHEN '4XL' THEN 10 ELSE 11 END`,
         productIds
       ) as typeof variants;
     }

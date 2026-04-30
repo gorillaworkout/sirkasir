@@ -20,7 +20,7 @@ export async function GET(
     }
 
     const variants = await d1Query(
-      `SELECT * FROM ProductVariant WHERE productId = ? ORDER BY CASE size WHEN 'S' THEN 1 WHEN 'M' THEN 2 WHEN 'L' THEN 3 WHEN 'XL' THEN 4 WHEN 'XXL' THEN 5 ELSE 6 END`, [id]
+      `SELECT * FROM ProductVariant WHERE productId = ? ORDER BY CASE size WHEN '1' THEN 1 WHEN '2' THEN 2 WHEN '3' THEN 3 WHEN 'S' THEN 4 WHEN 'M' THEN 5 WHEN 'L' THEN 6 WHEN 'XL' THEN 7 WHEN 'XXL' THEN 8 WHEN '3XL' THEN 9 WHEN '4XL' THEN 10 ELSE 11 END`, [id]
     );
 
     const movements = await d1Query(
@@ -111,7 +111,7 @@ export async function PUT(
     );
     const r = (updated as Record<string, unknown>[])[0];
     const updatedVariants = await d1Query(
-      `SELECT * FROM ProductVariant WHERE productId = ? ORDER BY CASE size WHEN 'S' THEN 1 WHEN 'M' THEN 2 WHEN 'L' THEN 3 WHEN 'XL' THEN 4 WHEN 'XXL' THEN 5 ELSE 6 END`, [id]
+      `SELECT * FROM ProductVariant WHERE productId = ? ORDER BY CASE size WHEN '1' THEN 1 WHEN '2' THEN 2 WHEN '3' THEN 3 WHEN 'S' THEN 4 WHEN 'M' THEN 5 WHEN 'L' THEN 6 WHEN 'XL' THEN 7 WHEN 'XXL' THEN 8 WHEN '3XL' THEN 9 WHEN '4XL' THEN 10 ELSE 11 END`, [id]
     );
     const totalStock = (updatedVariants as { stock: number }[]).reduce((sum, v) => sum + v.stock, 0);
 

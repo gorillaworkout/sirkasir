@@ -141,7 +141,7 @@ export async function POST(request: NextRequest) {
       }, { status: 201 });
 
     } else {
-      // Stock IN
+      // Stock IN with weighted average cost price
       const now = new Date().toISOString();
       for (const entry of entries) {
         const movementId = generateId();
@@ -152,8 +152,25 @@ export async function POST(request: NextRequest) {
         );
 
         if (entry.variantId) {
-          await d1Query('UPDATE ProductVariant SET stock = stock + ?, updatedAt = ? WHERE id = ?',
-            [entry.quantity, now, entry.variantId]);
+          // Weighted average: newCost = (oldStock * oldCost + newQty * newCost) / (oldStock + newQty)
+          if (entry.price && entry.price > 0) {
+            const variants = await d1Query('SELECT stock, costPrice FROM ProductVariant WHERE id = ?', [entry.variantId]);
+            const v = (variants as { stock: number; costPrice: number }[])[0];
+            if (v) {
+              const oldTotal = v.stock * v.costPrice;
+              const newTotal = entry.quantity * entry.price;
+              const newStock = v.stock + entry.quantity;
+              const avgCost = newStock > 0 ? Math.round((oldTotal + newTotal) / newStock) : entry.price;
+              await d1Query('UPDATE ProductVariant SET stock = ?, costPrice = ?, updatedAt = ? WHERE id = ?',
+                [newStock, avgCost, now, entry.variantId]);
+            } else {
+              await d1Query('UPDATE ProductVariant SET stock = stock + ?, updatedAt = ? WHERE id = ?',
+                [entry.quantity, now, entry.variantId]);
+            }
+          } else {
+            await d1Query('UPDATE ProductVariant SET stock = stock + ?, updatedAt = ? WHERE id = ?',
+              [entry.quantity, now, entry.variantId]);
+          }
         }
         await d1Query('UPDATE Product SET stock = stock + ?, updatedAt = ? WHERE id = ?',
           [entry.quantity, now, entry.productId]);
