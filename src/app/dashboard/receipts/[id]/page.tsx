@@ -68,7 +68,12 @@ export default function ReceiptDetailPage({ params }: { params: Promise<{ id: st
           Kembali
         </Link>
         <button
-          onClick={() => window.print()}
+          onClick={() => {
+            const originalTitle = document.title;
+            document.title = receipt?.receiptNumber || 'Struk';
+            window.print();
+            setTimeout(() => { document.title = originalTitle; }, 500);
+          }}
           className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors min-h-[44px]"
         >
           <Printer className="w-4 h-4" />
