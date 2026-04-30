@@ -90,14 +90,15 @@ export async function PUT(
     if (variants && Array.isArray(variants)) {
       for (const v of variants) {
         if (v.id) {
-          // existing variant - update
-          await d1Query('UPDATE ProductVariant SET size = ?, updatedAt = ? WHERE id = ?', [v.size, now, v.id]);
+          // existing variant - update size, price, costPrice
+          await d1Query('UPDATE ProductVariant SET size = ?, price = ?, costPrice = ?, updatedAt = ? WHERE id = ?', 
+            [v.size, v.price ?? 0, v.costPrice ?? 0, now, v.id]);
         } else {
           // new variant
           const varId = generateId();
           await d1Query(
-            'INSERT INTO ProductVariant (id, productId, size, stock, createdAt, updatedAt) VALUES (?, ?, ?, 0, ?, ?)',
-            [varId, id, v.size, now, now]
+            'INSERT INTO ProductVariant (id, productId, size, stock, price, costPrice, createdAt, updatedAt) VALUES (?, ?, ?, 0, ?, ?, ?, ?)',
+            [varId, id, v.size, v.price ?? 0, v.costPrice ?? 0, now, now]
           );
         }
       }

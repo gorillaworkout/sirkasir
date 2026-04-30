@@ -15,16 +15,18 @@ export async function GET() {
     const [
       countRows,
       todayMovementRows,
-      allProductRows,
       todayReceiptRows,
       lowStockRows,
     ] = await Promise.all([
       d1Query('SELECT COUNT(*) as count FROM Product'),
       d1Query('SELECT COUNT(*) as count FROM StockMovement WHERE createdAt >= ? AND createdAt < ?', [todayStr, tomorrowStr]),
-      d1Query('SELECT stock, costPrice FROM Product'),
       d1Query('SELECT totalAmount FROM Receipt WHERE createdAt >= ? AND createdAt < ?', [todayStr, tomorrowStr]),
       d1Query('SELECT p.id, p.name, p.color, p.unit, p.minStock, COALESCE(SUM(pv.stock), 0) as totalStock FROM Product p LEFT JOIN ProductVariant pv ON pv.productId = p.id GROUP BY p.id HAVING totalStock > 0 AND totalStock <= p.minStock'),
     ]);
+
+    // Calculate stock value from variants (each size has own price)
+    const allVariants = await d1Query('SELECT stock, price, costPrice FROM ProductVariant') as { stock: number; price: number; costPrice: number }[];
+    const totalStockValue = allVariants.reduce((sum, v) => sum + v.stock * v.costPrice, 0);
 
     // Recent movements with product + variant info
     const recentMovements = await d1Query(
@@ -45,10 +47,6 @@ export async function GET() {
     const totalProducts = (countRows as { count: number }[])[0]?.count || 0;
     const outOfStockCount = (outOfStockRows as { count: number }[])[0]?.count || 0;
     const todayTransactions = (todayMovementRows as { count: number }[])[0]?.count || 0;
-
-    const totalStockValue = (allProductRows as { stock: number; costPrice: number }[]).reduce(
-      (sum, p) => sum + p.stock * p.costPrice, 0
-    );
 
     const todayRevenue = (todayReceiptRows as { totalAmount: number }[]).reduce(
       (sum, r) => sum + r.totalAmount, 0

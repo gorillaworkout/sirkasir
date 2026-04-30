@@ -38,13 +38,12 @@ export async function GET(request: NextRequest) {
       catId: string; catName: string; catCreatedAt: string; catUpdatedAt: string;
     }
 
-    // Fetch variants for all products
     const productIds = (rows as ProductRow[]).map(r => r.id);
-    let variants: { id: string; productId: string; size: string; stock: number }[] = [];
+    let variants: { id: string; productId: string; size: string; stock: number; price: number; costPrice: number }[] = [];
     if (productIds.length > 0) {
       const placeholders = productIds.map(() => '?').join(',');
       variants = await d1Query(
-        `SELECT id, productId, size, stock FROM ProductVariant WHERE productId IN (${placeholders}) ORDER BY CASE size WHEN 'S' THEN 1 WHEN 'M' THEN 2 WHEN 'L' THEN 3 WHEN 'XL' THEN 4 WHEN 'XXL' THEN 5 ELSE 6 END`,
+        `SELECT id, productId, size, stock, price, costPrice FROM ProductVariant WHERE productId IN (${placeholders}) ORDER BY CASE size WHEN 'S' THEN 1 WHEN 'M' THEN 2 WHEN 'L' THEN 3 WHEN 'XL' THEN 4 WHEN 'XXL' THEN 5 ELSE 6 END`,
         productIds
       ) as typeof variants;
     }
@@ -91,16 +90,18 @@ export async function POST(request: NextRequest) {
       [id, name, sku, categoryId, price || 0, costPrice || 0, unit || 'pcs', minStock || 5, image || null, color || null, now, now]
     );
 
-    // Create size variants
     const defaultSizes = sizes && sizes.length > 0 ? sizes : ['S', 'M', 'L', 'XL'];
     const createdVariants = [];
-    for (const size of defaultSizes) {
+    for (const sizeEntry of defaultSizes) {
       const varId = generateId();
+      const sName = typeof sizeEntry === 'object' ? sizeEntry.size : sizeEntry;
+      const sPrice = typeof sizeEntry === 'object' ? (sizeEntry.price || 0) : (price || 0);
+      const sCost = typeof sizeEntry === 'object' ? (sizeEntry.costPrice || 0) : (costPrice || 0);
       await d1Query(
-        'INSERT INTO ProductVariant (id, productId, size, stock, createdAt, updatedAt) VALUES (?, ?, ?, 0, ?, ?)',
-        [varId, id, size, now, now]
+        'INSERT INTO ProductVariant (id, productId, size, stock, price, costPrice, createdAt, updatedAt) VALUES (?, ?, ?, 0, ?, ?, ?, ?)',
+        [varId, id, sName, sPrice, sCost, now, now]
       );
-      createdVariants.push({ id: varId, productId: id, size, stock: 0 });
+      createdVariants.push({ id: varId, productId: id, size: sName, stock: 0, price: sPrice, costPrice: sCost });
     }
 
     const cats = await d1Query('SELECT * FROM Category WHERE id = ?', [categoryId]);

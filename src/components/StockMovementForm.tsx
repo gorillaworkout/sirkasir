@@ -9,6 +9,8 @@ interface Variant {
   productId: string;
   size: string;
   stock: number;
+  price: number;
+  costPrice: number;
 }
 
 interface Product {
@@ -81,7 +83,7 @@ export default function StockMovementForm({ type, onSubmit, loading }: StockMove
         quantity: 1,
         unit: product.unit,
         note: '',
-        price: type === 'OUT' ? product.price : product.costPrice,
+        price: type === 'OUT' ? (variant.price || product.price) : (variant.costPrice || product.costPrice),
         variantStock: variant.stock,
       },
     ]);
@@ -181,8 +183,13 @@ export default function StockMovementForm({ type, onSubmit, loading }: StockMove
                           >
                             <span className="block text-sm font-semibold">{variant.size}</span>
                             <span className={`block text-[10px] ${variant.stock > 0 ? 'text-green-600' : 'text-gray-400'}`}>
-                              {variant.stock}
+                              Stok: {variant.stock}
                             </span>
+                            {variant.price > 0 && (
+                              <span className="block text-[10px] text-gray-500">
+                                {(variant.price / 1000).toFixed(0)}rb
+                              </span>
+                            )}
                           </button>
                         );
                       })}

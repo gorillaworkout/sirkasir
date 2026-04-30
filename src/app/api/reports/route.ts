@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
     const from = searchParams.get('from');
     const to = searchParams.get('to');
 
-    // Get stock movements with product info
+    // Get stock movements with product + variant info
     let movementSql = `SELECT sm.*, p.name as productName, p.sku as productSku, p.unit as productUnit, p.stock as productStock,
                         pv.size as variantSize
                         FROM StockMovement sm
@@ -45,18 +45,32 @@ export async function GET(request: NextRequest) {
       'SELECT id, name, sku, unit, stock, price, costPrice FROM Product'
     ) as { id: string; name: string; sku: string; unit: string; stock: number; price: number; costPrice: number }[];
 
+    // Get all variants for stock value calculation
+    const allVariants = await d1Query(
+      'SELECT productId, stock, price, costPrice FROM ProductVariant'
+    ) as { productId: string; stock: number; price: number; costPrice: number }[];
+
     // Calculate summary per product
     const productSummary = products.map(product => {
       const productMovements = movements.filter(m => m.productId === product.id);
       const totalIn = productMovements.filter(m => m.type === 'IN').reduce((sum, m) => sum + m.quantity, 0);
       const totalOut = productMovements.filter(m => m.type === 'OUT').reduce((sum, m) => sum + m.quantity, 0);
 
+      // Calculate value from variants (each size may have different price)
+      const pvs = allVariants.filter(v => v.productId === product.id);
+      const stockValue = pvs.reduce((sum, v) => sum + v.stock * v.costPrice, 0);
+      const sellValue = pvs.reduce((sum, v) => sum + v.stock * v.price, 0);
+
+      // Total stock from variants
+      const totalStock = pvs.reduce((sum, v) => sum + v.stock, 0);
+
       return {
         ...product,
+        stock: totalStock,
         totalIn,
         totalOut,
-        stockValue: product.stock * product.costPrice,
-        sellValue: product.stock * product.price,
+        stockValue,
+        sellValue,
       };
     });
 

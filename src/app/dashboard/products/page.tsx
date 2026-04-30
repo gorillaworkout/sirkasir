@@ -19,6 +19,8 @@ interface Variant {
   id: string;
   size: string;
   stock: number;
+  price: number;
+  costPrice: number;
 }
 
 interface Product {
@@ -37,17 +39,27 @@ interface Product {
   variants: Variant[];
 }
 
+interface VariantForm {
+  size: string;
+  price: number;
+  costPrice: number;
+  id?: string;
+}
+
 const defaultForm = {
   name: '',
   sku: '',
   categoryId: '',
-  price: 0,
-  costPrice: 0,
   unit: 'pcs',
   minStock: 5,
   image: '',
   color: '',
-  sizes: ['S', 'M', 'L', 'XL'],
+  variants: [
+    { size: 'S', price: 0, costPrice: 0 },
+    { size: 'M', price: 0, costPrice: 0 },
+    { size: 'L', price: 0, costPrice: 0 },
+    { size: 'XL', price: 0, costPrice: 0 },
+  ] as VariantForm[],
 };
 
 export default function ProductsPage() {
@@ -107,13 +119,16 @@ export default function ProductsPage() {
       name: product.name,
       sku: product.sku,
       categoryId: product.categoryId,
-      price: product.price,
-      costPrice: product.costPrice,
       unit: product.unit,
       minStock: product.minStock,
       image: product.image || '',
       color: product.color || '',
-      sizes: product.variants.map(v => v.size),
+      variants: product.variants.map(v => ({
+        size: v.size,
+        price: v.price,
+        costPrice: v.costPrice,
+        id: v.id,
+      })),
     });
     setSelectedProduct(product);
     setEditMode(true);
@@ -135,19 +150,26 @@ export default function ProductsPage() {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...form,
-          price: Number(form.price),
-          costPrice: Number(form.costPrice),
+          name: form.name,
+          sku: form.sku,
+          categoryId: form.categoryId,
+          unit: form.unit,
           minStock: Number(form.minStock),
           image: form.image || null,
           color: form.color || null,
-          sizes: form.sizes,
-          ...(editMode && {
-            variants: form.sizes.map(size => {
-              const existing = selectedProduct?.variants.find(v => v.size === size);
-              return existing ? { id: existing.id, size } : { size };
-            }),
-          }),
+          price: 0,
+          costPrice: 0,
+          variants: form.variants.map(v => ({
+            ...(v.id ? { id: v.id } : {}),
+            size: v.size,
+            price: Number(v.price),
+            costPrice: Number(v.costPrice),
+          })),
+          sizes: form.variants.map(v => ({
+            size: v.size,
+            price: Number(v.price),
+            costPrice: Number(v.costPrice),
+          })),
         }),
       });
 
@@ -191,14 +213,13 @@ export default function ProductsPage() {
 
   const addSize = () => {
     const size = newSize.trim().toUpperCase();
-    if (size && !form.sizes.includes(size)) {
-      setForm({ ...form, sizes: [...form.sizes, size] });
+    if (size && !form.variants.some(v => v.size === size)) {
+      setForm({ ...form, variants: [...form.variants, { size, price: 0, costPrice: 0 }] });
       setNewSize('');
     }
   };
 
   const removeSize = (size: string) => {
-    // Don't allow removing sizes that have stock (in edit mode)
     if (editMode) {
       const variant = selectedProduct?.variants.find(v => v.size === size);
       if (variant && variant.stock > 0) {
@@ -206,7 +227,13 @@ export default function ProductsPage() {
         return;
       }
     }
-    setForm({ ...form, sizes: form.sizes.filter(s => s !== size) });
+    setForm({ ...form, variants: form.variants.filter(v => v.size !== size) });
+  };
+
+  const updateVariantForm = (index: number, field: 'price' | 'costPrice', value: number) => {
+    const updated = [...form.variants];
+    updated[index] = { ...updated[index], [field]: value };
+    setForm({ ...form, variants: updated });
   };
 
   if (loading) return <LoadingSpinner />;
@@ -285,6 +312,17 @@ export default function ProductsPage() {
                 {product.price > 0 && (
                   <p className="text-sm font-medium text-blue-600 mb-2">{formatCurrency(product.price)}</p>
                 )}
+                {product.variants.some(v => v.price > 0) && (
+                  <p className="text-xs text-gray-500 mb-2">
+                    {(() => {
+                      const prices = product.variants.filter(v => v.price > 0).map(v => v.price);
+                      if (prices.length === 0) return '';
+                      const min = Math.min(...prices);
+                      const max = Math.max(...prices);
+                      return min === max ? formatCurrency(min) : `${formatCurrency(min)} - ${formatCurrency(max)}`;
+                    })()}
+                  </p>
+                )}
                 {/* Size grid */}
                 <div className="flex flex-wrap gap-1.5">
                   {product.variants.map((v) => (
@@ -327,25 +365,19 @@ export default function ProductsPage() {
                   <p className="font-medium text-gray-900">{selectedProduct.color}</p>
                 </div>
               )}
-              <div className="bg-gray-50 rounded-xl p-3">
-                <p className="text-xs text-gray-500">Harga Jual</p>
-                <p className="font-medium text-gray-900">{formatCurrency(selectedProduct.price)}</p>
-              </div>
-              <div className="bg-gray-50 rounded-xl p-3">
-                <p className="text-xs text-gray-500">Harga Beli</p>
-                <p className="font-medium text-gray-900">{formatCurrency(selectedProduct.costPrice)}</p>
-              </div>
             </div>
 
             {/* Variants table */}
             <div>
-              <p className="text-sm font-medium text-gray-700 mb-2">Stok per Size</p>
+              <p className="text-sm font-medium text-gray-700 mb-2">Stok & Harga per Size</p>
               <div className="bg-gray-50 rounded-xl overflow-hidden">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-gray-200">
                       <th className="text-left px-4 py-2 font-medium text-gray-500">Size</th>
                       <th className="text-right px-4 py-2 font-medium text-gray-500">Stok</th>
+                      <th className="text-right px-4 py-2 font-medium text-gray-500">Harga Jual</th>
+                      <th className="text-right px-4 py-2 font-medium text-gray-500">Harga Beli</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -357,11 +389,14 @@ export default function ProductsPage() {
                         }`}>
                           {v.stock}
                         </td>
+                        <td className="px-4 py-2 text-right text-gray-700">{formatCurrency(v.price)}</td>
+                        <td className="px-4 py-2 text-right text-gray-500">{formatCurrency(v.costPrice)}</td>
                       </tr>
                     ))}
                     <tr className="bg-gray-100 font-bold">
                       <td className="px-4 py-2">Total</td>
                       <td className="px-4 py-2 text-right">{selectedProduct.stock}</td>
+                      <td className="px-4 py-2" colSpan={2}></td>
                     </tr>
                   </tbody>
                 </table>
@@ -445,49 +480,45 @@ export default function ProductsPage() {
             </select>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Harga Jual</label>
-              <input
-                type="number"
-                value={form.price}
-                onChange={(e) => setForm({ ...form, price: Number(e.target.value) })}
-                min="0"
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[44px]"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Harga Beli</label>
-              <input
-                type="number"
-                value={form.costPrice}
-                onChange={(e) => setForm({ ...form, costPrice: Number(e.target.value) })}
-                min="0"
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[44px]"
-              />
-            </div>
-          </div>
-
-          {/* Sizes */}
+          {/* Sizes with prices */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Ukuran (Size)</label>
-            <div className="flex flex-wrap gap-2 mb-2">
-              {form.sizes.map((size) => (
-                <span
-                  key={size}
-                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium"
-                >
-                  {size}
+            <label className="block text-sm font-medium text-gray-700 mb-2">Ukuran & Harga</label>
+            <div className="space-y-2">
+              {form.variants.map((v, idx) => (
+                <div key={v.size} className="flex items-center gap-2 bg-gray-50 rounded-xl p-3">
+                  <span className="font-semibold text-gray-900 w-10">{v.size}</span>
+                  <div className="flex-1">
+                    <label className="text-[10px] text-gray-500">Jual</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={v.price || ''}
+                      onChange={(e) => updateVariantForm(idx, 'price', e.target.value === '' ? 0 : Number(e.target.value))}
+                      placeholder="0"
+                      className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <label className="text-[10px] text-gray-500">Beli</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={v.costPrice || ''}
+                      onChange={(e) => updateVariantForm(idx, 'costPrice', e.target.value === '' ? 0 : Number(e.target.value))}
+                      placeholder="0"
+                      className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
                   <button
-                    onClick={() => removeSize(size)}
-                    className="ml-1 text-blue-400 hover:text-red-500 text-lg leading-none"
+                    onClick={() => removeSize(v.size)}
+                    className="p-1 text-gray-400 hover:text-red-500 text-lg leading-none"
                   >
                     ×
                   </button>
-                </span>
+                </div>
               ))}
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 mt-2">
               <input
                 type="text"
                 value={newSize}
