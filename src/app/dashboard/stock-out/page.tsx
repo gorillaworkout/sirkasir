@@ -24,13 +24,14 @@ export default function StockOutPage() {
       price: number;
       subtotal: number;
       product: { name: string; unit: string };
+      variantSize?: string | null;
     }[];
   } | null>(null);
   const [showReceipt, setShowReceipt] = useState(false);
   const { showToast } = useToast();
 
   const handleSubmit = async (
-    entries: { productId: string; quantity: number; note: string; price: number }[],
+    entries: { productId: string; variantId: string; quantity: number; note: string; price: number }[],
     extraData?: { customerName?: string; note?: string }
   ) => {
     setLoading(true);
@@ -42,6 +43,7 @@ export default function StockOutPage() {
           type: 'OUT',
           entries: entries.map((e) => ({
             productId: e.productId,
+            variantId: e.variantId,
             quantity: e.quantity,
             note: e.note,
             price: e.price,
@@ -71,7 +73,6 @@ export default function StockOutPage() {
 
   return (
     <div className="p-4 md:p-6 max-w-2xl mx-auto">
-      {/* Header */}
       <div className="mb-6">
         <div className="flex items-center gap-3 mb-1">
           <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
@@ -84,7 +85,6 @@ export default function StockOutPage() {
         </div>
       </div>
 
-      {/* Last receipt quick link */}
       {lastReceipt && !showReceipt && (
         <div className="mb-4 bg-green-50 border border-green-200 rounded-xl p-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -105,7 +105,6 @@ export default function StockOutPage() {
 
       <StockMovementForm key={key} type="OUT" onSubmit={handleSubmit} loading={loading} />
 
-      {/* Receipt Modal */}
       <Modal isOpen={showReceipt} onClose={() => setShowReceipt(false)} title="Struk Penjualan" maxWidth="max-w-md">
         {lastReceipt && (
           <div>

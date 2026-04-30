@@ -10,7 +10,7 @@ export default function StockInPage() {
   const [key, setKey] = useState(0);
   const { showToast } = useToast();
 
-  const handleSubmit = async (entries: { productId: string; quantity: number; note: string }[]) => {
+  const handleSubmit = async (entries: { productId: string; variantId: string; quantity: number; note: string }[]) => {
     setLoading(true);
     try {
       const res = await fetch('/api/stock', {
@@ -20,6 +20,7 @@ export default function StockInPage() {
           type: 'IN',
           entries: entries.map((e) => ({
             productId: e.productId,
+            variantId: e.variantId,
             quantity: e.quantity,
             note: e.note,
           })),
@@ -32,8 +33,8 @@ export default function StockInPage() {
         return;
       }
 
-      showToast(`${entries.length} produk berhasil ditambahkan stoknya`, 'success');
-      setKey((k) => k + 1); // Reset form
+      showToast(`${entries.length} item berhasil ditambahkan stoknya`, 'success');
+      setKey((k) => k + 1);
     } catch {
       showToast('Gagal menyimpan stok masuk', 'error');
     } finally {
@@ -43,7 +44,6 @@ export default function StockInPage() {
 
   return (
     <div className="p-4 md:p-6 max-w-2xl mx-auto">
-      {/* Header */}
       <div className="mb-6">
         <div className="flex items-center gap-3 mb-1">
           <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center">
