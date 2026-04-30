@@ -76,8 +76,8 @@ export async function GET(request: NextRequest) {
 
     const totalStockValue = productSummary.reduce((sum, p) => sum + p.stockValue, 0);
     const totalSellValue = productSummary.reduce((sum, p) => sum + p.sellValue, 0);
-    const totalIn = movements.filter(m => m.type === 'IN').length;
-    const totalOut = movements.filter(m => m.type === 'OUT').length;
+    const totalIn = movements.filter(m => m.type === 'IN').reduce((sum, m) => sum + m.quantity, 0);
+    const totalOut = movements.filter(m => m.type === 'OUT').reduce((sum, m) => sum + m.quantity, 0);
 
     return NextResponse.json({
       movements,

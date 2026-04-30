@@ -18,7 +18,7 @@ export default function Modal({ isOpen, onClose, title, children, maxWidth = 'ma
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
       <div className="fixed inset-0 bg-black/50" onClick={onClose} />
       <div className={`relative bg-white rounded-t-2xl sm:rounded-2xl w-full ${maxWidth} max-h-[90vh] overflow-y-auto shadow-xl`}>
-        <div className="sticky top-0 bg-white flex items-center justify-between p-4 border-b rounded-t-2xl z-10">
+        <div className="sticky top-0 bg-white flex items-center justify-between p-4 border-b rounded-t-2xl z-10 print:hidden">
           <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
           <button
             onClick={onClose}
