@@ -110,7 +110,8 @@ export default function ReceiptView({ receipt, onPrint }: ReceiptViewProps) {
           <button
             onClick={() => {
               const originalTitle = document.title;
-              document.title = receipt.receiptNumber;
+              const name = receipt.customerName || 'Struk';
+              document.title = `${name} - ${receipt.receiptNumber}`;
               window.print();
               setTimeout(() => { document.title = originalTitle; }, 500);
             }}

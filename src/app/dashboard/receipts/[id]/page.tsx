@@ -70,7 +70,8 @@ export default function ReceiptDetailPage({ params }: { params: Promise<{ id: st
         <button
           onClick={() => {
             const originalTitle = document.title;
-            document.title = receipt?.receiptNumber || 'Struk';
+            const name = receipt?.customerName || 'Struk';
+            document.title = `${name} - ${receipt?.receiptNumber || 'Struk'}`;
             window.print();
             setTimeout(() => { document.title = originalTitle; }, 500);
           }}
