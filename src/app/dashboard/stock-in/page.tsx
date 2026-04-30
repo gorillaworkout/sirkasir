@@ -10,7 +10,7 @@ export default function StockInPage() {
   const [key, setKey] = useState(0);
   const { showToast } = useToast();
 
-  const handleSubmit = async (entries: { productId: string; variantId: string; quantity: number; note: string }[]) => {
+  const handleSubmit = async (entries: { productId: string; variantId: string; quantity: number; note: string; price: number }[]) => {
     setLoading(true);
     try {
       const res = await fetch('/api/stock', {
@@ -23,6 +23,7 @@ export default function StockInPage() {
             variantId: e.variantId,
             quantity: e.quantity,
             note: e.note,
+            price: e.price,
           })),
         }),
       });

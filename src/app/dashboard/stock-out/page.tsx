@@ -110,7 +110,8 @@ export default function StockOutPage() {
             receipt={lastReceipt}
             onPrint={() => {
               const originalTitle = document.title;
-              document.title = lastReceipt.receiptNumber;
+              const name = lastReceipt.customerName || 'Struk';
+              document.title = `${name} - ${lastReceipt.receiptNumber}`;
               window.print();
               setTimeout(() => { document.title = originalTitle; }, 500);
             }}
