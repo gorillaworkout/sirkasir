@@ -8,6 +8,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const from = searchParams.get('from');
     const to = searchParams.get('to');
+    const status = searchParams.get('status');
 
     let sql = 'SELECT * FROM Receipt';
     const params: unknown[] = [];
@@ -15,6 +16,12 @@ export async function GET(request: NextRequest) {
 
     if (from) { conditions.push('createdAt >= ?'); params.push(new Date(from).toISOString()); }
     if (to) { conditions.push('createdAt <= ?'); params.push(new Date(to + 'T23:59:59.999Z').toISOString()); }
+    
+    if (status === 'LUNAS') {
+      conditions.push("(paymentStatus = 'LUNAS' OR paymentStatus IS NULL)");
+    } else if (status === 'BELUM_LUNAS') {
+      conditions.push("(paymentStatus = 'DP' OR paymentStatus = 'TUNDA_BAYAR')");
+    }
 
     if (conditions.length > 0) sql += ' WHERE ' + conditions.join(' AND ');
     sql += ' ORDER BY createdAt DESC';

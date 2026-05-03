@@ -50,6 +50,9 @@ model Receipt {
   items         ReceiptItem[]
   customerName  String?
   totalAmount   Float
+  paymentStatus String        @default("LUNAS") // LUNAS, DP, TUNDA_BAYAR
+  dpAmount      Float?        
+  dueDate       DateTime?
   note          String?
   createdAt     DateTime      @default(now())
 }

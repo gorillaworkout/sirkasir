@@ -31,7 +31,7 @@ export default function StockOutPage() {
 
   const handleSubmit = async (
     entries: { productId: string; variantId: string; quantity: number; note: string; price: number }[],
-    extraData?: { customerName?: string; note?: string }
+    extraData?: { customerName?: string; note?: string; paymentStatus?: string; dpAmount?: number; dueDate?: string }
   ) => {
     setLoading(true);
     try {
@@ -49,6 +49,9 @@ export default function StockOutPage() {
           })),
           customerName: extraData?.customerName,
           note: extraData?.note,
+          paymentStatus: extraData?.paymentStatus,
+          dpAmount: extraData?.dpAmount,
+          dueDate: extraData?.dueDate,
         }),
       });
 

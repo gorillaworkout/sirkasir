@@ -1,7 +1,7 @@
 'use client';
 
 import { ReactNode } from 'react';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, CheckCircle } from 'lucide-react';
 
 interface ConfirmDialogProps {
   isOpen: boolean;
@@ -11,7 +11,7 @@ interface ConfirmDialogProps {
   message: string | ReactNode;
   confirmText?: string;
   cancelText?: string;
-  variant?: 'danger' | 'warning';
+  variant?: 'danger' | 'warning' | 'success';
 }
 
 export default function ConfirmDialog({
@@ -32,11 +32,16 @@ export default function ConfirmDialog({
       <div className="relative bg-white rounded-2xl w-full max-w-sm shadow-xl p-6">
         <div className="flex flex-col items-center text-center">
           <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-4 ${
-            variant === 'danger' ? 'bg-red-100' : 'bg-yellow-100'
+            variant === 'danger' ? 'bg-red-100' : 
+            variant === 'warning' ? 'bg-yellow-100' : 'bg-green-100'
           }`}>
-            <AlertTriangle className={`w-6 h-6 ${
-              variant === 'danger' ? 'text-red-600' : 'text-yellow-600'
-            }`} />
+            {variant === 'success' ? (
+              <CheckCircle className="w-6 h-6 text-green-600" />
+            ) : (
+              <AlertTriangle className={`w-6 h-6 ${
+                variant === 'danger' ? 'text-red-600' : 'text-yellow-600'
+              }`} />
+            )}
           </div>
           <h3 className="text-lg font-semibold text-gray-900 mb-2">{title}</h3>
           <div className="text-gray-600 text-sm mb-6">{message}</div>
@@ -53,9 +58,9 @@ export default function ConfirmDialog({
                 onClose();
               }}
               className={`flex-1 px-4 py-3 rounded-xl text-white font-medium transition-colors min-h-[44px] ${
-                variant === 'danger'
-                  ? 'bg-red-600 hover:bg-red-700'
-                  : 'bg-yellow-600 hover:bg-yellow-700'
+                variant === 'danger' ? 'bg-red-600 hover:bg-red-700' :
+                variant === 'warning' ? 'bg-yellow-600 hover:bg-yellow-700' :
+                'bg-green-600 hover:bg-green-700'
               }`}
             >
               {confirmText}

@@ -45,3 +45,25 @@ export async function GET(
     return NextResponse.json({ error: 'Failed to fetch receipt' }, { status: 500 });
   }
 }
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const body = await request.json();
+    const { paymentStatus } = body;
+
+    if (paymentStatus !== 'LUNAS') {
+      return NextResponse.json({ error: 'Invalid payment status' }, { status: 400 });
+    }
+
+    await d1Query('UPDATE Receipt SET paymentStatus = ? WHERE id = ?', [paymentStatus, id]);
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Error updating receipt:', error);
+    return NextResponse.json({ error: 'Failed to update receipt' }, { status: 500 });
+  }
+}

@@ -5,6 +5,8 @@ import { ArrowLeft, Printer } from 'lucide-react';
 import ReceiptView from '@/components/ReceiptView';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import Link from 'next/link';
+import { useToast } from '@/components/Toast';
+import ConfirmDialog from '@/components/ConfirmDialog';
 
 interface ReceiptData {
   id: string;
@@ -13,6 +15,9 @@ interface ReceiptData {
   totalAmount: number;
   note: string | null;
   createdAt: string;
+  paymentStatus: string;
+  dpAmount: number | null;
+  dueDate: string | null;
   items: {
     id: string;
     quantity: number;
@@ -27,8 +32,9 @@ export default function ReceiptDetailPage({ params }: { params: Promise<{ id: st
   const [receipt, setReceipt] = useState<ReceiptData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showConfirmLunas, setShowConfirmLunas] = useState(false);
 
-  useEffect(() => {
+  const fetchReceipt = () => {
     fetch(`/api/receipts/${id}`)
       .then((res) => {
         if (!res.ok) throw new Error('Not found');
@@ -42,7 +48,35 @@ export default function ReceiptDetailPage({ params }: { params: Promise<{ id: st
         setError('Struk tidak ditemukan');
         setLoading(false);
       });
+  };
+
+  useEffect(() => {
+    fetchReceipt();
   }, [id]);
+
+  const { showToast } = useToast();
+
+  const processMarkAsLunas = async () => {
+    try {
+      const res = await fetch(`/api/receipts/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ paymentStatus: 'LUNAS' }),
+      });
+      if (res.ok) {
+        showToast('Pembayaran berhasil ditandai LUNAS! 🎉', 'success');
+        fetchReceipt();
+      } else {
+        showToast('Gagal mengupdate status', 'error');
+      }
+    } catch {
+      showToast('Terjadi kesalahan', 'error');
+    }
+  };
+
+  const handleMarkAsLunas = () => {
+    setShowConfirmLunas(true);
+  };
 
   if (loading) return <LoadingSpinner />;
   if (error) {
@@ -82,6 +116,40 @@ export default function ReceiptDetailPage({ params }: { params: Promise<{ id: st
         </button>
       </div>
 
+      {/* Status banner */}
+      {receipt && receipt.paymentStatus !== 'LUNAS' && (
+        <div className="max-w-sm mx-auto px-4 mt-4 no-print">
+          <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 flex flex-col gap-3">
+            <div className="flex justify-between items-center">
+              <div>
+                <span className="font-bold text-orange-800">
+                  {receipt.paymentStatus === 'DP' ? 'Status: DP' : 'Status: Tunda Bayar'}
+                </span>
+                {receipt.dueDate && (
+                  <p className="text-xs text-orange-600 mt-0.5">
+                    Tenggat: {new Date(receipt.dueDate).toLocaleDateString('id-ID')}
+                  </p>
+                )}
+              </div>
+              {receipt.paymentStatus === 'DP' && receipt.dpAmount !== null && (
+                <div className="text-right">
+                  <p className="text-xs text-orange-600">Sisa Bayar</p>
+                  <p className="font-bold text-orange-800">
+                    Rp {(receipt.totalAmount - receipt.dpAmount).toLocaleString('id-ID')}
+                  </p>
+                </div>
+              )}
+            </div>
+            <button
+              onClick={handleMarkAsLunas}
+              className="w-full py-2 bg-orange-600 text-white rounded-lg text-sm font-medium hover:bg-orange-700 transition-colors"
+            >
+              Tandai Lunas
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Receipt - centered, clean */}
       <div className="max-w-sm mx-auto py-6 px-4 receipt-print-area">
         {receipt && (
@@ -90,6 +158,17 @@ export default function ReceiptDetailPage({ params }: { params: Promise<{ id: st
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        isOpen={showConfirmLunas}
+        onClose={() => setShowConfirmLunas(false)}
+        onConfirm={processMarkAsLunas}
+        title="Tandai Lunas"
+        message="Apakah Anda yakin tagihan ini sudah dilunasi? Status struk akan berubah menjadi LUNAS."
+        confirmText="Ya, Sudah Lunas"
+        cancelText="Batal"
+        variant="success"
+      />
     </div>
   );
 }

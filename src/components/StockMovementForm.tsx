@@ -39,7 +39,7 @@ interface StockEntry {
 
 interface StockMovementFormProps {
   type: 'IN' | 'OUT';
-  onSubmit: (entries: StockEntry[], extraData?: { customerName?: string; note?: string }) => Promise<void>;
+  onSubmit: (entries: StockEntry[], extraData?: { customerName?: string; note?: string; paymentStatus?: string; dpAmount?: number; dueDate?: string }) => Promise<void>;
   loading: boolean;
 }
 
@@ -50,6 +50,9 @@ export default function StockMovementForm({ type, onSubmit, loading }: StockMove
   const [expandedProduct, setExpandedProduct] = useState<string | null>(null);
   const [customerName, setCustomerName] = useState('');
   const [note, setNote] = useState('');
+  const [paymentStatus, setPaymentStatus] = useState('LUNAS');
+  const [dpAmount, setDpAmount] = useState<number | ''>('');
+  const [dueDate, setDueDate] = useState('');
   const [loadingProducts, setLoadingProducts] = useState(true);
 
   useEffect(() => {
@@ -103,10 +106,17 @@ export default function StockMovementForm({ type, onSubmit, loading }: StockMove
 
   const handleSubmit = async () => {
     if (entries.length === 0) return;
-    await onSubmit(entries, { customerName, note });
+    await onSubmit(entries, { 
+      customerName, 
+      note,
+      ...(type === 'OUT' ? { paymentStatus, dpAmount: dpAmount === '' ? undefined : Number(dpAmount), dueDate } : {})
+    });
     setEntries([]);
     setCustomerName('');
     setNote('');
+    setPaymentStatus('LUNAS');
+    setDpAmount('');
+    setDueDate('');
   };
 
   const toggleProduct = (productId: string) => {
@@ -257,21 +267,65 @@ export default function StockMovementForm({ type, onSubmit, loading }: StockMove
 
           {/* Customer name (OUT only) */}
           {type === 'OUT' && (
-            <div>
-              <label className="text-sm text-gray-600 mb-1 block">Nama Pelanggan (opsional)</label>
-              <input
-                type="text"
-                value={customerName}
-                onChange={(e) => setCustomerName(e.target.value)}
-                placeholder="Nama pelanggan..."
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[44px]"
-              />
+            <div className="space-y-3">
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-1 block">Nama Pelanggan (opsional)</label>
+                <input
+                  type="text"
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  placeholder="Nama pelanggan..."
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[44px]"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-1 block">Status Pembayaran</label>
+                <select
+                  value={paymentStatus}
+                  onChange={(e) => setPaymentStatus(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[44px] bg-white"
+                >
+                  <option value="LUNAS">Lunas</option>
+                  <option value="DP">DP (Down Payment)</option>
+                  <option value="TUNDA_BAYAR">Tunda Bayar</option>
+                </select>
+              </div>
+
+              {paymentStatus === 'DP' && (
+                <div>
+                  <label className="text-sm font-medium text-gray-700 mb-1 block">Jumlah DP (Rp)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={dpAmount}
+                    onChange={(e) => setDpAmount(e.target.value === '' ? '' : parseInt(e.target.value))}
+                    placeholder="Contoh: 50000"
+                    className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[44px]"
+                  />
+                  {dpAmount !== '' && (
+                    <p className="text-xs text-orange-600 mt-1">Sisa bayar: {formatCurrency(totalAmount - Number(dpAmount))}</p>
+                  )}
+                </div>
+              )}
+
+              {(paymentStatus === 'DP' || paymentStatus === 'TUNDA_BAYAR') && (
+                <div>
+                  <label className="text-sm font-medium text-gray-700 mb-1 block">Tenggat Waktu</label>
+                  <input
+                    type="date"
+                    value={dueDate}
+                    onChange={(e) => setDueDate(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[44px]"
+                  />
+                </div>
+              )}
             </div>
           )}
 
           {/* Note */}
           <div>
-            <label className="text-sm text-gray-600 mb-1 block">Catatan (opsional)</label>
+            <label className="text-sm font-medium text-gray-700 mb-1 block mt-3">Catatan (opsional)</label>
             <input
               type="text"
               value={note}

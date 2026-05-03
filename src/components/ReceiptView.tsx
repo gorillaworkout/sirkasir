@@ -12,6 +12,9 @@ interface ReceiptViewProps {
     totalAmount: number;
     note?: string | null;
     createdAt: string;
+    paymentStatus?: string;
+    dpAmount?: number | null;
+    dueDate?: string | null;
     items: {
       id: string;
       quantity: number;
@@ -78,11 +81,45 @@ export default function ReceiptView({ receipt, onPrint }: ReceiptViewProps) {
       </div>
 
       {/* Total */}
-      <div className="py-3 border-b border-dashed border-gray-300">
+      <div className="py-3 border-b border-dashed border-gray-300 space-y-1">
         <div className="flex justify-between text-lg font-bold">
           <span>Total</span>
           <span className="text-blue-600">{formatCurrency(receipt.totalAmount)}</span>
         </div>
+        
+        {(!receipt.paymentStatus || receipt.paymentStatus === 'LUNAS') ? (
+          <div className="flex justify-between text-sm text-gray-600">
+            <span>Status Pembayaran</span>
+            <span className="font-bold text-green-600">LUNAS</span>
+          </div>
+        ) : (
+          <>
+            <div className="flex justify-between text-sm text-gray-600">
+              <span>Status Pembayaran</span>
+              <span className="font-bold text-orange-600">
+                {receipt.paymentStatus === 'DP' ? 'BELUM LUNAS (DP)' : 'BELUM LUNAS (Tunda Bayar)'}
+              </span>
+            </div>
+            {receipt.paymentStatus === 'DP' && receipt.dpAmount !== null && receipt.dpAmount !== undefined && (
+              <div className="flex justify-between text-sm text-gray-600">
+                <span>Jumlah DP</span>
+                <span>{formatCurrency(receipt.dpAmount)}</span>
+              </div>
+            )}
+            <div className="flex justify-between text-sm font-bold text-gray-800 mt-1 pt-1 border-t border-gray-100">
+              <span>Sisa Bayar</span>
+              <span className="text-orange-600">
+                {formatCurrency(receipt.totalAmount - (receipt.dpAmount || 0))}
+              </span>
+            </div>
+            {receipt.dueDate && (
+              <div className="flex justify-between text-xs text-gray-500 mt-1">
+                <span>Jatuh Tempo</span>
+                <span className="text-red-600 font-medium">{new Date(receipt.dueDate).toLocaleDateString('id-ID')}</span>
+              </div>
+            )}
+          </>
+        )}
       </div>
 
       {/* Note */}

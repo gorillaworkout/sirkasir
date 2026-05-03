@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { entries, type, customerName, note } = body;
+    const { entries, type, customerName, note, paymentStatus, dpAmount, dueDate } = body;
 
     if (!entries || !Array.isArray(entries) || entries.length === 0) {
       return NextResponse.json({ error: 'Entries are required' }, { status: 400 });
@@ -84,8 +84,12 @@ export async function POST(request: NextRequest) {
       );
 
       await d1Query(
-        'INSERT INTO Receipt (id, receiptNumber, customerName, totalAmount, note, createdAt) VALUES (?, ?, ?, ?, ?, ?)',
-        [receiptId, receiptNumber, customerName || null, totalAmount, note || null, now]
+        'INSERT INTO Receipt (id, receiptNumber, customerName, totalAmount, paymentStatus, dpAmount, dueDate, note, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [
+          receiptId, receiptNumber, customerName || null, totalAmount, 
+          paymentStatus || 'LUNAS', dpAmount || null, dueDate ? new Date(dueDate).toISOString() : null, 
+          note || null, now
+        ]
       );
 
       for (const entry of entries) {
@@ -135,6 +139,9 @@ export async function POST(request: NextRequest) {
         receipt: {
           id: receiptId, receiptNumber, customerName: customerName || null,
           totalAmount, note: note || null, createdAt: now,
+          paymentStatus: paymentStatus || 'LUNAS',
+          dpAmount: dpAmount || null,
+          dueDate: dueDate ? new Date(dueDate).toISOString() : null,
           items: formattedItems,
         },
         receiptNumber,

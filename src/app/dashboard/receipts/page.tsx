@@ -14,6 +14,7 @@ interface ReceiptData {
   totalAmount: number;
   note: string | null;
   createdAt: string;
+  paymentStatus: string;
   items: {
     id: string;
     quantity: number;
@@ -28,6 +29,7 @@ export default function ReceiptsPage() {
   const [loading, setLoading] = useState(true);
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [statusFilter, setStatusFilter] = useState('ALL');
 
   const fetchReceipts = async () => {
     setLoading(true);
@@ -35,6 +37,7 @@ export default function ReceiptsPage() {
       const params = new URLSearchParams();
       if (dateFrom) params.set('from', dateFrom);
       if (dateTo) params.set('to', dateTo);
+      if (statusFilter !== 'ALL') params.set('status', statusFilter);
       const res = await fetch(`/api/receipts?${params}`);
       const data = await res.json();
       setReceipts(data);
@@ -47,7 +50,7 @@ export default function ReceiptsPage() {
 
   useEffect(() => {
     fetchReceipts();
-  }, [dateFrom, dateTo]);
+  }, [dateFrom, dateTo, statusFilter]);
 
   const totalRevenue = receipts.reduce((sum, r) => sum + r.totalAmount, 0);
 
@@ -77,9 +80,18 @@ export default function ReceiptsPage() {
             className="flex-1 px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[44px]"
           />
         </div>
-        {(dateFrom || dateTo) && (
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[44px]"
+        >
+          <option value="ALL">Semua Status</option>
+          <option value="LUNAS">Lunas</option>
+          <option value="BELUM_LUNAS">Belum Lunas (DP & Tunda)</option>
+        </select>
+        {(dateFrom || dateTo || statusFilter !== 'ALL') && (
           <button
-            onClick={() => { setDateFrom(''); setDateTo(''); }}
+            onClick={() => { setDateFrom(''); setDateTo(''); setStatusFilter('ALL'); }}
             className="px-4 py-3 text-sm text-gray-600 hover:text-gray-900 border border-gray-200 rounded-xl min-h-[44px]"
           >
             Reset
@@ -119,6 +131,11 @@ export default function ReceiptsPage() {
                   <p className="text-xs text-gray-500 mt-1">{formatDateTime(receipt.createdAt)}</p>
                   {receipt.customerName && (
                     <p className="text-xs text-gray-500 mt-0.5">Pelanggan: {receipt.customerName}</p>
+                  )}
+                  {receipt.paymentStatus !== 'LUNAS' && (
+                    <span className="inline-block mt-1 px-2 py-0.5 bg-orange-100 text-orange-700 rounded text-[10px] font-bold">
+                      {receipt.paymentStatus === 'DP' ? 'DP' : 'TUNDA BAYAR'}
+                    </span>
                   )}
                   <p className="text-xs text-gray-400 mt-1">
                     {receipt.items.length} item: {receipt.items.map((i) => i.product.name).join(', ')}
