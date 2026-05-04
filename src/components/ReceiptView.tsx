@@ -36,7 +36,7 @@ export default function ReceiptView({ receipt, onPrint }: ReceiptViewProps) {
       {/* Header */}
       <div className="text-center pb-4 border-b-2 border-dashed border-gray-300">
         <Image
-          src="/logo-kikihoka.png"
+          src="/logo-kikihoka-receipt.jpg"
           alt="Kikihoka Kaospolos"
           width={72}
           height={72}
