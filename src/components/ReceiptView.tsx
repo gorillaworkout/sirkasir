@@ -32,7 +32,7 @@ interface ReceiptViewProps {
 
 export default function ReceiptView({ receipt, onPrint }: ReceiptViewProps) {
   return (
-    <div className="bg-white max-w-md mx-auto">
+    <div className="bg-white max-w-lg mx-auto px-4">
       {/* Header */}
       <div className="text-center pb-4 border-b-2 border-dashed border-gray-300">
         <Image
@@ -68,7 +68,7 @@ export default function ReceiptView({ receipt, onPrint }: ReceiptViewProps) {
       <div className="py-3 border-b border-dashed border-gray-300 space-y-3">
         {receipt.items.map((item) => (
           <div key={item.id} className="border-b border-gray-50 last:border-0 pb-2 last:pb-0">
-            <p className="text-sm font-medium text-gray-900">
+            <p className="text-sm font-medium text-gray-900 break-words">
               {item.product.name}
               {item.variantSize && <span className="text-gray-500"> ({item.variantSize})</span>}
             </p>
@@ -82,6 +82,10 @@ export default function ReceiptView({ receipt, onPrint }: ReceiptViewProps) {
 
       {/* Total */}
       <div className="py-3 border-b border-dashed border-gray-300 space-y-1">
+        <div className="flex justify-between text-sm text-gray-600">
+          <span>Total Qty</span>
+          <span className="font-medium text-gray-900">{receipt.items.reduce((sum, item) => sum + item.quantity, 0)} pcs</span>
+        </div>
         <div className="flex justify-between text-lg font-bold">
           <span>Total</span>
           <span className="text-blue-600">{formatCurrency(receipt.totalAmount)}</span>
