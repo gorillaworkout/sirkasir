@@ -134,8 +134,13 @@ export default function ReceiptView({ receipt, onPrint }: ReceiptViewProps) {
       )}
 
       {/* Footer */}
-      <div className="py-4 text-center">
+      <div className="py-4 text-center space-y-2">
         <p className="text-sm text-gray-500">Terima kasih atas pembelian Anda!</p>
+        <div className="pt-2 border-t border-dashed border-gray-200">
+          <p className="text-xs text-gray-400 uppercase tracking-wider font-semibold">Pembayaran Transfer:</p>
+          <p className="text-sm font-bold text-gray-800">BCA 4960386936</p>
+          <p className="text-sm text-gray-600">Imam hakiki</p>
+        </div>
       </div>
 
       {/* Action buttons */}
