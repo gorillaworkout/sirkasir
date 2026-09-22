@@ -38,15 +38,12 @@ export async function GET(request: NextRequest) {
       catId: string; catName: string; catCreatedAt: string; catUpdatedAt: string;
     }
 
-    const productIds = (rows as ProductRow[]).map(r => r.id);
-    let variants: { id: string; productId: string; size: string; stock: number; price: number; costPrice: number }[] = [];
-    if (productIds.length > 0) {
-      const placeholders = productIds.map(() => '?').join(',');
-      variants = await d1Query(
-        `SELECT id, productId, size, stock, price, costPrice FROM ProductVariant WHERE productId IN (${placeholders}) ORDER BY CASE size WHEN '1' THEN 1 WHEN '2' THEN 2 WHEN '3' THEN 3 WHEN 'S' THEN 4 WHEN 'M' THEN 5 WHEN 'L' THEN 6 WHEN 'XL' THEN 7 WHEN 'XXL' THEN 8 WHEN '3XL' THEN 9 WHEN '4XL' THEN 10 ELSE 11 END`,
-        productIds
-      ) as typeof variants;
-    }
+    const productIds = new Set((rows as ProductRow[]).map(r => r.id));
+    // D1 rejects the 100+ bound parameters produced by `IN (?, ?, …)` once
+    // the catalogue grows. Fetch the bounded variant table, then join in JS.
+    const variants = (await d1Query(
+      "SELECT id, productId, size, stock, price, costPrice FROM ProductVariant ORDER BY CASE size WHEN '1' THEN 1 WHEN '2' THEN 2 WHEN '3' THEN 3 WHEN 'S' THEN 4 WHEN 'M' THEN 5 WHEN 'L' THEN 6 WHEN 'XL' THEN 7 WHEN 'XXL' THEN 8 WHEN '3XL' THEN 9 WHEN '4XL' THEN 10 ELSE 11 END"
+    ) as { id: string; productId: string; size: string; stock: number; price: number; costPrice: number }[]).filter(v => productIds.has(v.productId));
 
     const products = (rows as ProductRow[]).map(r => {
       const productVariants = variants.filter(v => v.productId === r.id);
